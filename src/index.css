@@ -1,0 +1,62 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    @apply bg-bg text-text font-sans;
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
+  }
+
+  #root {
+    min-height: 100vh;
+    max-width: 100%;
+  }
+
+  /* Telegram WebApp moslashish */
+  :root {
+    --tg-bg: #F8F7F4;
+  }
+}
+
+@layer components {
+  .card {
+    @apply bg-white rounded-card shadow-card p-4;
+  }
+
+  .btn-primary {
+    @apply bg-primary text-white px-4 py-3 rounded-card font-medium 
+           hover:bg-primary-dark active:scale-98 transition-all;
+  }
+
+  .btn-secondary {
+    @apply bg-bg-subtle text-text px-4 py-3 rounded-card font-medium 
+           hover:bg-gray-200 active:scale-98 transition-all;
+  }
+
+  .stat-card {
+    @apply bg-white rounded-card shadow-card p-3 flex flex-col gap-1;
+  }
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 2px;
+}
