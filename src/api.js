@@ -1,5 +1,5 @@
 /**
- * API Client v2 - Backend bilan ulanish
+ * API Client - Production version
  */
 
 const API_BASE_URL = 'https://rm5-miniapp-backend-production.up.railway.app';
@@ -26,57 +26,45 @@ async function apiFetch(endpoint, options = {}) {
   }
 }
 
-// ============== STUDENT API ==============
-
 export const studentAPI = {
   async getProfile(telegramId) {
     return apiFetch(`/api/student/${telegramId}/profile`);
   },
-
   async getScores(telegramId) {
     return apiFetch(`/api/student/${telegramId}/scores`);
   },
-
   async getLessons(telegramId) {
     return apiFetch(`/api/student/${telegramId}/lessons`);
   },
-
   async getRanking(telegramId) {
     return apiFetch(`/api/student/${telegramId}/ranking`);
   },
 };
 
-export const statsAPI = {
-  async getOverall() {
-    return apiFetch('/api/stats');
-  },
-};
-
-export const healthAPI = {
-  async check() {
-    return apiFetch('/');
-  },
-};
-
-// ============== TELEGRAM WEBAPP ==============
-
+/**
+ * Telegram WebApp dan HAQIQIY foydalanuvchini olish
+ * Test rejimi olib tashlandi!
+ */
 export function getTelegramUser() {
   if (typeof window === 'undefined') return null;
   
   const tg = window.Telegram?.WebApp;
   
   if (!tg) {
-    // Test rejimida Asadulloh sifatida
-    console.warn('⚠️ Telegram WebApp topilmadi, test rejimi');
-    return {
-      id: 1797037742,
-      first_name: 'Asadulloh',
-      last_name: 'Ahmad',
-      username: 'asadulloh0408',
-    };
+    // Brauzer'da to'g'ridan-to'g'ri ochish - ruxsat berilmaydi
+    console.error('❌ Telegram WebApp yo\'q');
+    return null;
   }
 
-  return tg.initDataUnsafe?.user || null;
+  // Real Telegram'dan kelgan ma'lumot
+  const user = tg.initDataUnsafe?.user;
+  
+  if (!user || !user.id) {
+    console.error('❌ Telegram user ma\'lumotlari yo\'q');
+    return null;
+  }
+  
+  return user;
 }
 
 export function initTelegramWebApp() {
