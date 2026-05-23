@@ -153,6 +153,7 @@ function AdminPanel({ authData, telegramId }) {
       {adminTab === 'management' && mngSubPage === 'users' && !usersSubPage && <AdminUsersMenu onBack={() => setMngSubPage(null)} onSubPage={setUsersSubPage} />}
       {adminTab === 'management' && mngSubPage === 'users' && usersSubPage === 'approved' && !selectedStudentId && <AdminStudentsList onBack={() => setUsersSubPage(null)} onSelectStudent={setSelectedStudentId} />}
       {adminTab === 'management' && mngSubPage === 'users' && usersSubPage === 'approved' && selectedStudentId && <AdminStudentDetail userId={selectedStudentId} onBack={() => setSelectedStudentId(null)} />}
+      {adminTab === 'management' && mngSubPage === 'users' && usersSubPage === 'groups' && <AdminGroupsList onBack={() => setUsersSubPage(null)} />}
       {adminTab === 'stats' && <AdminStats />}
       {adminTab === 'settings' && <AdminSettings />}
       
@@ -490,7 +491,7 @@ function AdminUsersMenu({ onBack, onSubPage }) {
           <h3 className="text-xs font-bold tracking-widest text-outline uppercase px-1 mb-2">TURLAR</h3>
           <div className="bg-white border border-outline-variant rounded-2xl divide-y divide-outline-variant overflow-hidden shadow-sm">
             {items.map(item => (
-              <button key={item.id} onClick={() => item.id === 'approved' ? onSubPage('approved') : alert(item.label + ' tez orada qoshiladi')}
+              <button key={item.id} onClick={() => (item.id === 'approved' || item.id === 'groups') ? onSubPage(item.id) : alert(item.label + ' tez orada qoshiladi')}
                 className="w-full flex items-center justify-between p-4 hover:bg-surface-container-low active:scale-[0.99] transition-all">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-lg bg-primary-fixed flex items-center justify-center text-2xl">
@@ -862,6 +863,104 @@ function AdminStudentDetail({ userId, onBack }) {
             <span className="material-symbols-outlined text-error/60">chevron_right</span>
           </button>
         </section>
+      </main>
+    </div>
+  );
+}
+
+// ============== ADMIN GROUPS LIST ==============
+function AdminGroupsList({ onBack }) {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    studentAPI.getAdminGroups()
+      .then(d => { setData(d); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, []);
+
+  if (loading) {
+    return <div className="font-inter bg-background min-h-screen flex items-center justify-center"><div>Yuklanmoqda...</div></div>;
+  }
+
+  const groups = data?.groups || [];
+
+  return (
+    <div className="font-inter bg-background min-h-screen pb-24">
+      <header className="fixed top-0 left-0 w-full z-50 flex items-center justify-between px-4 bg-surface h-14 border-b border-outline-variant">
+        <div className="flex items-center gap-3">
+          <button onClick={onBack} className="active:scale-95">
+            <span className="material-symbols-outlined text-primary">arrow_back</span>
+          </button>
+          <h1 className="text-base font-bold text-primary">👥 Guruhlar ({groups.length})</h1>
+        </div>
+      </header>
+
+      <main className="pt-20 px-4 space-y-4">
+        <section>
+          <h2 className="text-xl font-bold text-on-surface mb-1">Guruhlar reytingi</h2>
+          <p className="text-xs text-on-surface-variant mb-4">O'rtacha ball bo'yicha tartiblangan</p>
+        </section>
+
+        <section className="space-y-3">
+          {groups.map((g, idx) => {
+            const isFirst = g.rank === 1;
+            const medal = g.rank === 1 ? "🥇" : g.rank === 2 ? "🥈" : g.rank === 3 ? "🥉" : "#" + g.rank;
+            
+            if (isFirst) {
+              // Top guruh - katta yashil kartochka
+              return (
+                <div key={g.id} className="rounded-2xl p-5 text-white shadow-lg relative overflow-hidden"
+                  style={{background: "linear-gradient(135deg, #003b2c 0%, #005440 100%)"}}>
+                  <div className="absolute -top-4 -right-4 opacity-10">
+                    <span className="material-symbols-outlined text-[120px]">workspace_premium</span>
+                  </div>
+                  <div className="relative z-10">
+                    <div className="flex justify-between items-start mb-3">
+                      <div>
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-2xl">🥇</span>
+                          <span className="text-lg font-bold">{g.name}</span>
+                        </div>
+                        <p className="text-xs opacity-80">Kurator: {g.curator_name}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-2xl font-bold">{g.avg_score}</p>
+                        <p className="text-[10px] opacity-80 uppercase">O'rtacha</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-4 text-xs opacity-90">
+                      <span><span className="material-symbols-outlined text-[14px] align-middle">group</span> {g.students_count} ta o'quvchi</span>
+                    </div>
+                  </div>
+                </div>
+              );
+            }
+            
+            // Boshqa guruhlar - kichik kartochka
+            return (
+              <div key={g.id} className="bg-white rounded-2xl p-4 shadow-sm border border-outline-variant flex items-center gap-3">
+                <div className="w-12 h-12 rounded-full bg-secondary-container flex items-center justify-center text-lg flex-shrink-0">
+                  {medal}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex justify-between items-baseline">
+                    <h4 className="text-sm font-bold text-on-surface truncate">{g.name}</h4>
+                    <span className="text-base font-bold text-primary ml-2">{g.avg_score}</span>
+                  </div>
+                  <p className="text-xs text-outline truncate">Kurator: {g.curator_name}</p>
+                  <p className="text-[10px] text-outline mt-0.5">{g.students_count} ta o'quvchi</p>
+                </div>
+              </div>
+            );
+          })}
+        </section>
+
+        <button onClick={() => alert("Yangi guruh qoshish tez orada")} 
+          className="w-full bg-primary-container text-white h-14 rounded-2xl font-semibold flex items-center justify-center gap-2 active:scale-95 transition-transform">
+          <span className="material-symbols-outlined">add</span>
+          Yangi guruh qo'shish
+        </button>
       </main>
     </div>
   );

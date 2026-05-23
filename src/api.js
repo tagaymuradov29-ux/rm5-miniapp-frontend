@@ -60,6 +60,9 @@ export const studentAPI = {
   async getAdminStudentDetail(userId) {
     return apiFetch(`/api/admin/student/${userId}`);
   },
+  async getAdminGroups() {
+    return apiFetch(`/api/admin/groups`);
+  },
 };
 
 /**
