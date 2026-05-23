@@ -209,102 +209,142 @@ function ScoreBar({ icon, label, earned, max }) {
 
 // ============== LESSONS TAB ==============
 function LessonsTab({ lessons }) {
+  const [filter, setFilter] = useState('all');
+  
+  const filtered = lessons.filter(l => {
+    if (filter === 'all') return true;
+    if (filter === 'todo') return l.is_unlocked && !isLessonComplete(l);
+    if (filter === 'done') return l.is_unlocked && isLessonComplete(l);
+    if (filter === 'late') return l.is_unlocked && isLessonLate(l);
+    return true;
+  });
+
   return (
-    <div className="p-4">
-      <h1 className="text-2xl font-bold mb-4">📚 Vazifalar</h1>
-      <div className="text-sm text-text-secondary mb-4">
-        Jami {lessons.length} ta dars
+    <div className="font-inter bg-background min-h-screen pb-24">
+      {/* Sticky tabs */}
+      <div className="sticky top-0 z-40 bg-surface/95 backdrop-blur-md border-b border-outline-variant/30">
+        <div className="flex items-center px-4 overflow-x-auto gap-2 py-3" style={{scrollbarWidth: 'none'}}>
+          <TabBtn active={filter==='all'} onClick={() => setFilter('all')}>Hammasi</TabBtn>
+          <TabBtn active={filter==='todo'} onClick={() => setFilter('todo')}>Bajarish kerak</TabBtn>
+          <TabBtn active={filter==='done'} onClick={() => setFilter('done')}>Bajarilgan</TabBtn>
+          <TabBtn active={filter==='late'} onClick={() => setFilter('late')}>Kechikkan</TabBtn>
+        </div>
       </div>
-      
-      <div className="space-y-3">
-        {lessons.map(lesson => (
-          <LessonCard key={lesson.lesson_id} lesson={lesson} />
-        ))}
+
+      <div className="px-4 pt-4 flex flex-col gap-3">
+        <p className="text-xs text-on-surface-variant">Jami {filtered.length} ta dars</p>
+        {filtered.length === 0 ? (
+          <div className="text-center py-8 text-on-surface-variant">
+            <span className="material-symbols-outlined text-4xl text-outline">inbox</span>
+            <p className="mt-2 text-sm">Bu kategoriyada darslar yo'q</p>
+          </div>
+        ) : (
+          filtered.map(lesson => <LessonCard key={lesson.lesson_id} lesson={lesson} />)
+        )}
       </div>
     </div>
   );
+}
+
+function TabBtn({ active, onClick, children }) {
+  return (
+    <button onClick={onClick} className={
+      'px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap active:scale-95 transition-all ' +
+      (active ? 'bg-primary text-white shadow-sm' : 'bg-surface-container-high text-on-surface-variant')
+    }>{children}</button>
+  );
+}
+
+function isLessonComplete(l) {
+  const items = [l.konspekt, l.workbook, l.amaliy, l.test].filter(x => x !== null);
+  if (items.length === 0) return false;
+  return items.every(x => x && x.status === 'APPROVED');
+}
+
+function isLessonLate(l) {
+  return [l.konspekt, l.workbook, l.amaliy, l.test].some(x => x && x.status === 'REJECTED');
 }
 
 function LessonCard({ lesson }) {
   if (!lesson.is_unlocked) {
     return (
-      <div className="card opacity-60">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-bg-subtle flex items-center justify-center text-text-secondary font-bold">
-            🔒
-          </div>
-          <div>
-            <div className="text-sm text-text-secondary">{lesson.lesson_number}-dars</div>
-            <div className="font-medium">{lesson.title}</div>
-            <div className="text-xs text-text-muted mt-1">
-              📅 {new Date(lesson.lesson_date).toLocaleDateString('uz')}
-            </div>
+      <article className="bg-surface-container-low rounded-2xl p-4 border border-dashed border-outline-variant/50 relative overflow-hidden">
+        <div className="absolute inset-0 bg-white/20 backdrop-blur-[1px] flex items-center justify-center z-10">
+          <div className="bg-white/95 px-4 py-2 rounded-full shadow-sm border border-outline-variant/30 flex items-center gap-2">
+            <span className="material-symbols-outlined text-primary text-[18px]">lock</span>
+            <span className="text-sm font-semibold text-primary">{lesson.lesson_number}-dars yaqinda</span>
           </div>
         </div>
-      </div>
+        <div className="blur-[2px]">
+          <div className="flex justify-between items-start mb-2">
+            <span className="px-2 py-1 bg-surface-variant text-on-surface-variant text-xs rounded-lg">{lesson.lesson_number}-dars</span>
+            <span className="text-xs text-on-surface-variant">{new Date(lesson.lesson_date).toLocaleDateString('uz')}</span>
+          </div>
+          <h2 className="text-base font-semibold text-on-surface mb-2">{lesson.title}</h2>
+          <div className="grid grid-cols-2 gap-2">
+            <div className="h-10 bg-surface-container-highest rounded-lg"></div>
+            <div className="h-10 bg-surface-container-highest rounded-lg"></div>
+          </div>
+        </div>
+      </article>
     );
   }
 
   return (
-    <div className="card">
-      <div className="flex items-start gap-3 mb-3">
-        <div className="w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center font-bold flex-shrink-0">
-          {lesson.lesson_number}
-        </div>
-        <div className="flex-1">
-          <div className="font-semibold mb-1">{lesson.title}</div>
-          {lesson.speaker && (
-            <div className="text-xs text-text-secondary">👨‍🏫 {lesson.speaker}</div>
-          )}
-          <div className="text-xs text-text-muted">
-            📅 {new Date(lesson.lesson_date).toLocaleDateString('uz')}
-          </div>
+    <article className="bg-white rounded-2xl p-4 shadow-sm border border-outline-variant/30">
+      <div className="flex justify-between items-start mb-2">
+        <span className="px-2 py-1 bg-primary-container/20 text-primary text-xs font-semibold rounded-lg">{lesson.lesson_number}-dars</span>
+        <div className="flex items-center gap-1 text-on-surface-variant">
+          <span className="material-symbols-outlined text-[16px]">calendar_today</span>
+          <span className="text-xs">{new Date(lesson.lesson_date).toLocaleDateString('uz')}</span>
         </div>
       </div>
-
-      <div className="flex flex-wrap gap-2 pt-2 border-t border-bg-subtle">
-        <StatusChip type="📒 Konspekt" data={lesson.konspekt} maxScore={10} />
-        {lesson.workbook !== null && (
-          <StatusChip type="📘 Workbook" data={lesson.workbook} maxScore={20} />
-        )}
-        {lesson.amaliy !== null && (
-          <StatusChip type="🛠 Amaliy" data={lesson.amaliy} maxScore={50} />
-        )}
-        {lesson.test !== null && (
-          <StatusChip type="🧪 Test" data={lesson.test} maxScore={20} />
-        )}
+      
+      <h2 className="text-base font-bold text-on-surface mb-2 leading-tight">{lesson.title}</h2>
+      
+      {lesson.speaker && (
+        <div className="flex items-center gap-2 mb-3">
+          <span className="material-symbols-outlined text-on-surface-variant text-[16px]">person</span>
+          <span className="text-sm text-on-surface-variant">{lesson.speaker}</span>
+        </div>
+      )}
+      
+      <div className="grid grid-cols-2 gap-2">
+        <StatusChip icon="📒" type="Konspekt" data={lesson.konspekt} />
+        <StatusChip icon="📘" type="Workbook" data={lesson.workbook} />
+        <StatusChip icon="🛠" type="Amaliy" data={lesson.amaliy} />
+        <StatusChip icon="🧪" type="Test" data={lesson.test} />
       </div>
-    </div>
+    </article>
   );
 }
 
-function StatusChip({ type, data, maxScore }) {
-  if (!data) {
-    return (
-      <div className="text-xs px-2 py-1 rounded-chip bg-bg-subtle text-text-secondary">
-        {type} <span className="opacity-60">— yo'q</span>
-      </div>
-    );
+function StatusChip({ icon, type, data }) {
+  let bg = 'bg-surface-container-low border-outline-variant/10';
+  let textColor = 'text-on-surface-variant';
+  let label = '— yo\'q';
+  
+  if (data) {
+    if (data.status === 'APPROVED') {
+      bg = 'bg-primary-container/15 border-primary/10';
+      textColor = 'text-primary font-bold';
+      label = '✅ ' + (data.score || 0);
+    } else if (data.status === 'PENDING') {
+      bg = 'bg-secondary-container/20 border-secondary/10';
+      textColor = 'text-secondary font-bold';
+      label = '⏳ Pending';
+    } else if (data.status === 'REJECTED') {
+      bg = 'bg-error-container/20 border-error/10';
+      textColor = 'text-error font-bold';
+      label = '🔄 Qayta';
+    }
   }
-
-  const status = data.status;
-  let color = 'bg-success/10 text-success';
-  let label = `✅ ${data.score}`;
-
-  if (status === 'PENDING') {
-    color = 'bg-warning/10 text-warning';
-    label = '⏳ kutmoqda';
-  } else if (status === 'REJECTED') {
-    color = 'bg-danger/10 text-danger';
-    label = '🔄 qayta';
-  } else if (data.score === 0 && status !== 'APPROVED') {
-    color = 'bg-bg-subtle text-text-secondary';
-    label = `${data.score}`;
-  }
-
+  
   return (
-    <div className={`text-xs px-2 py-1 rounded-chip font-medium ${color}`}>
-      {type} {label}
+    <div className={'flex items-center gap-1 p-2 rounded-lg border ' + bg}>
+      <span className="text-xs flex items-center gap-1">
+        {icon} {type}: <span className={textColor}>{label}</span>
+      </span>
     </div>
   );
 }
