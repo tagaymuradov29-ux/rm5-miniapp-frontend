@@ -561,9 +561,9 @@ function AdminStudentsList({ onBack }) {
     );
   }
   
-  // Filter by group
+  // Filter by group nomi (group_id ishlatmaymiz - DB ID lar tartibsiz)
   if (filterGroup !== 'all') {
-    students = students.filter(st => st.group_id === parseInt(filterGroup));
+    students = students.filter(st => st.group_name && st.group_name.startsWith(filterGroup + '-'));
   }
   
   // Sort
@@ -575,9 +575,9 @@ function AdminStudentsList({ onBack }) {
 
   const groups = [
     { id: 'all', label: 'Hammasi' },
-    { id: '1', label: '1-guruh' },
-    { id: '2', label: '2-guruh' },
-    { id: '3', label: '3-guruh' },
+    { id: '1', label: '1-guruh (Azizjon)' },
+    { id: '2', label: '2-guruh (Farhod)' },
+    { id: '3', label: '3-guruh (Tursunali)' },
   ];
 
   return (
