@@ -39,39 +39,11 @@ export const studentAPI = {
   async getRanking(telegramId) {
     return apiFetch(`/api/student/${telegramId}/ranking`);
   },
-  async getLessonDetails(telegramId, lessonId) {
-    return apiFetch(`/api/student/${telegramId}/lesson/${lessonId}`);
-  },
-  async getDashboard(telegramId) {
-    return apiFetch(`/api/student/${telegramId}/dashboard`);
-  },
-  async getAuthMe(telegramId) {
-    return apiFetch(`/api/auth/me?telegram_id=${telegramId}`);
-  },
-  async getAdminDashboard() {
-    return apiFetch(`/api/admin/dashboard`);
-  },
-  async getAdminUsersStats() {
-    return apiFetch(`/api/admin/users/stats`);
-  },
-  async getAdminStudents() {
-    return apiFetch(`/api/admin/students`);
-  },
-  async getAdminStudentDetail(userId) {
-    return apiFetch(`/api/admin/student/${userId}`);
-  },
-  async getAdminGroups() {
-    return apiFetch(`/api/admin/groups`);
-  },
-  async getAdminTrend(taskType, groupId) {
-    const gid = groupId ? `&group_id=${groupId}` : "";
-    return apiFetch(`/api/admin/trend?task_type=${taskType || "all"}${gid}`);
-  },
 };
 
 /**
  * Telegram WebApp dan HAQIQIY foydalanuvchini olish
- * Debug ma'lumot bilan
+ * Test rejimi olib tashlandi!
  */
 export function getTelegramUser() {
   if (typeof window === 'undefined') return null;
@@ -79,25 +51,17 @@ export function getTelegramUser() {
   const tg = window.Telegram?.WebApp;
   
   if (!tg) {
-    console.error('Telegram WebApp yoq');
-    return { _error: true, _debug: 'window.Telegram.WebApp = undefined. Brauzerdan ochilgan boladi.' };
+    // Brauzer'da to'g'ridan-to'g'ri ochish - ruxsat berilmaydi
+    console.error('❌ Telegram WebApp yo\'q');
+    return null;
   }
 
+  // Real Telegram'dan kelgan ma'lumot
   const user = tg.initDataUnsafe?.user;
   
   if (!user || !user.id) {
-    const debugInfo = {
-      hasInitData: !!tg.initData,
-      initDataLength: tg.initData ? tg.initData.length : 0,
-      initDataUnsafe: tg.initDataUnsafe || 'null',
-      version: tg.version,
-      platform: tg.platform
-    };
-    console.error('Telegram user yoq:', debugInfo);
-    return { 
-      _error: true, 
-      _debug: JSON.stringify(debugInfo, null, 2)
-    };
+    console.error('❌ Telegram user ma\'lumotlari yo\'q');
+    return null;
   }
   
   return user;

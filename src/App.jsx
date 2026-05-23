@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { studentAPI, getTelegramUser, initTelegramWebApp } from './api';
 
 export default function App() {
@@ -116,6 +116,8 @@ function AdminPanel({ authData, telegramId }) {
   const [mngSubPage, setMngSubPage] = useState(null); // null / users / lessons / tasks / projects / bonus
   const [usersSubPage, setUsersSubPage] = useState(null); // null / approved / pending / groups / curators / assistants / blocked
   const [selectedStudentId, setSelectedStudentId] = useState(null);
+  const [selectedGroupId, setSelectedGroupId] = useState(null);
+  const [showCourseTrend, setShowCourseTrend] = useState(false);
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -153,7 +155,9 @@ function AdminPanel({ authData, telegramId }) {
       {adminTab === 'management' && mngSubPage === 'users' && !usersSubPage && <AdminUsersMenu onBack={() => setMngSubPage(null)} onSubPage={setUsersSubPage} />}
       {adminTab === 'management' && mngSubPage === 'users' && usersSubPage === 'approved' && !selectedStudentId && <AdminStudentsList onBack={() => setUsersSubPage(null)} onSelectStudent={setSelectedStudentId} />}
       {adminTab === 'management' && mngSubPage === 'users' && usersSubPage === 'approved' && selectedStudentId && <AdminStudentDetail userId={selectedStudentId} onBack={() => setSelectedStudentId(null)} />}
-      {adminTab === 'management' && mngSubPage === 'users' && usersSubPage === 'groups' && <AdminGroupsList onBack={() => setUsersSubPage(null)} />}
+      {adminTab === 'management' && mngSubPage === 'users' && usersSubPage === 'groups' && !selectedGroupId && !showCourseTrend && <AdminGroupsList onBack={() => setUsersSubPage(null)} onSelectGroup={setSelectedGroupId} onShowCourseTrend={() => setShowCourseTrend(true)} />}
+      {adminTab === 'management' && mngSubPage === 'users' && usersSubPage === 'groups' && selectedGroupId && <AdminGroupTrend groupId={selectedGroupId} onBack={() => setSelectedGroupId(null)} />}
+      {adminTab === 'management' && mngSubPage === 'users' && usersSubPage === 'groups' && showCourseTrend && <AdminCourseTrend onBack={() => setShowCourseTrend(false)} />}
       {adminTab === 'stats' && <AdminStats />}
       {adminTab === 'settings' && <AdminSettings />}
       
@@ -869,7 +873,7 @@ function AdminStudentDetail({ userId, onBack }) {
 }
 
 // ============== ADMIN GROUPS LIST ==============
-function AdminGroupsList({ onBack }) {
+function AdminGroupsList({ onBack, onSelectGroup, onShowCourseTrend }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -910,7 +914,7 @@ function AdminGroupsList({ onBack }) {
             if (isFirst) {
               // Top guruh - katta yashil kartochka
               return (
-                <div key={g.id} className="rounded-2xl p-5 text-white shadow-lg relative overflow-hidden"
+                <button key={g.id} onClick={() => onSelectGroup(g.id)} className="w-full text-left rounded-2xl p-5 text-white shadow-lg relative overflow-hidden active:scale-[0.98]"
                   style={{background: "linear-gradient(135deg, #003b2c 0%, #005440 100%)"}}>
                   <div className="absolute -top-4 -right-4 opacity-10">
                     <span className="material-symbols-outlined text-[120px]">workspace_premium</span>
@@ -933,13 +937,13 @@ function AdminGroupsList({ onBack }) {
                       <span><span className="material-symbols-outlined text-[14px] align-middle">group</span> {g.students_count} ta o'quvchi</span>
                     </div>
                   </div>
-                </div>
+                </button>
               );
             }
             
             // Boshqa guruhlar - kichik kartochka
             return (
-              <div key={g.id} className="bg-white rounded-2xl p-4 shadow-sm border border-outline-variant flex items-center gap-3">
+              <button key={g.id} onClick={() => onSelectGroup(g.id)} className="w-full text-left bg-white rounded-2xl p-4 shadow-sm border border-outline-variant flex items-center gap-3 active:scale-[0.98]">
                 <div className="w-12 h-12 rounded-full bg-secondary-container flex items-center justify-center text-lg flex-shrink-0">
                   {medal}
                 </div>
@@ -951,16 +955,235 @@ function AdminGroupsList({ onBack }) {
                   <p className="text-xs text-outline truncate">Kurator: {g.curator_name}</p>
                   <p className="text-[10px] text-outline mt-0.5">{g.students_count} ta o'quvchi</p>
                 </div>
-              </div>
+              </button>
             );
           })}
         </section>
+
+        <button onClick={onShowCourseTrend} className="w-full bg-white border border-outline-variant text-on-surface h-14 rounded-2xl font-semibold flex items-center justify-center gap-2 active:scale-95 mb-3 shadow-sm">
+          <span className="material-symbols-outlined text-primary">analytics</span>
+          Umumiy kurs trendi
+        </button>
 
         <button onClick={() => alert("Yangi guruh qoshish tez orada")} 
           className="w-full bg-primary-container text-white h-14 rounded-2xl font-semibold flex items-center justify-center gap-2 active:scale-95 transition-transform">
           <span className="material-symbols-outlined">add</span>
           Yangi guruh qo'shish
         </button>
+      </main>
+    </div>
+  );
+}
+
+
+// === TREND CHART ===
+function TrendChart({ lessons }) {
+  const canvasRef = useRef(null);
+  const chartRef = useRef(null);
+  useEffect(() => {
+    if (!canvasRef.current || !window.Chart) return;
+    if (chartRef.current) chartRef.current.destroy();
+    const ctx = canvasRef.current.getContext("2d");
+    const gradient = ctx.createLinearGradient(0, 0, 0, 200);
+    gradient.addColorStop(0, "rgba(0, 59, 44, 0.3)");
+    gradient.addColorStop(1, "rgba(0, 59, 44, 0)");
+    chartRef.current = new window.Chart(ctx, {
+      type: "line",
+      data: {
+        labels: lessons.map(l => "D" + l.lesson_number),
+        datasets: [{
+          label: "Avg",
+          data: lessons.map(l => l.is_unlocked && l.count > 0 ? l.avg_score : null),
+          borderColor: "#003b2c",
+          backgroundColor: gradient,
+          borderWidth: 3,
+          fill: true,
+          tension: 0.4,
+          pointRadius: 4,
+          pointBackgroundColor: "#003b2c",
+          pointHoverRadius: 7,
+          spanGaps: false,
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { grid: { display: false }, ticks: { font: { size: 10 }, color: "#6f7974" } },
+          y: { min: 0, grid: { color: "rgba(0,0,0,0.05)" }, ticks: { font: { size: 10 }, color: "#6f7974" } }
+        }
+      }
+    });
+    return () => { if (chartRef.current) chartRef.current.destroy(); };
+  }, [lessons]);
+  return <canvas ref={canvasRef} />;
+}
+
+// === TASK FILTER ===
+function TaskFilter({ value, onChange }) {
+  const tasks = [
+    { id: "all", label: "Hammasi" },
+    { id: "konspekt", label: "Konspekt" },
+    { id: "workbook", label: "Workbook" },
+    { id: "amaliy", label: "Amaliy" },
+    { id: "test", label: "Test" },
+    { id: "workshop", label: "Workshop" },
+    { id: "stories", label: "Stories" },
+    { id: "reels", label: "Reels" },
+  ];
+  return (
+    <div className="flex gap-2 overflow-x-auto pb-1" style={{scrollbarWidth: "none"}}>
+      {tasks.map(t => (
+        <button key={t.id} onClick={() => onChange(t.id)}
+          className={"flex-shrink-0 px-4 py-2 rounded-full text-xs font-semibold whitespace-nowrap " + (value === t.id ? "bg-primary text-white" : "bg-white border border-outline-variant text-on-surface-variant")}>
+          {t.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+// === INSIGHTS BENTO ===
+function InsightsBento({ insights }) {
+  return (
+    <section className="grid grid-cols-2 gap-2">
+      <div className="bg-primary/5 border border-primary/10 p-4 rounded-2xl">
+        <p className="text-[10px] font-bold text-primary tracking-widest">ENG YAXSHI</p>
+        <h4 className="text-lg font-bold text-primary mt-1">{insights?.best_lesson ? insights.best_lesson.lesson_number + "-dars" : "-"}</h4>
+        <p className="text-xs font-semibold text-primary mt-2">{insights?.best_lesson?.avg_score?.toFixed(1) || "0"} avg</p>
+      </div>
+      <div className="bg-error/5 border border-error/10 p-4 rounded-2xl">
+        <p className="text-[10px] font-bold text-error tracking-widest">ENG ZAIF</p>
+        <h4 className="text-lg font-bold text-error mt-1">{insights?.worst_lesson ? insights.worst_lesson.lesson_number + "-dars" : "-"}</h4>
+        <p className="text-xs font-semibold text-error mt-2">{insights?.worst_lesson?.avg_score?.toFixed(1) || "0"} avg</p>
+      </div>
+      <div className="bg-white border border-outline-variant p-4 rounded-2xl">
+        <p className="text-[10px] font-bold text-on-surface-variant tracking-widest">KOTARILISH</p>
+        <div className="flex items-baseline gap-2 mt-1">
+          <h4 className="text-base font-bold">{insights?.biggest_rise ? insights.biggest_rise.from + " -> " + insights.biggest_rise.to : "-"}</h4>
+          {insights?.biggest_rise && <span className="text-primary font-bold text-sm">+{insights.biggest_rise.percent}%</span>}
+        </div>
+      </div>
+      <div className="bg-white border border-outline-variant p-4 rounded-2xl">
+        <p className="text-[10px] font-bold text-on-surface-variant tracking-widest">TUSHISH</p>
+        <div className="flex items-baseline gap-2 mt-1">
+          <h4 className="text-base font-bold">{insights?.biggest_drop ? insights.biggest_drop.from + " -> " + insights.biggest_drop.to : "-"}</h4>
+          {insights?.biggest_drop && <span className="text-error font-bold text-sm">{insights.biggest_drop.percent}%</span>}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// === COURSE TREND ===
+function AdminCourseTrend({ onBack }) {
+  const [taskType, setTaskType] = useState("all");
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    setLoading(true);
+    studentAPI.getAdminTrend(taskType)
+      .then(d => { setData(d); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, [taskType]);
+  return (
+    <div className="font-inter bg-background min-h-screen pb-24">
+      <header className="fixed top-0 left-0 w-full z-50 flex items-center justify-between px-4 bg-surface h-14 border-b border-outline-variant">
+        <div className="flex items-center gap-3">
+          <button onClick={onBack} className="active:scale-95">
+            <span className="material-symbols-outlined text-primary">arrow_back</span>
+          </button>
+          <h1 className="text-base font-bold text-primary">Umumiy kurs trendi</h1>
+        </div>
+      </header>
+      <main className="pt-20 px-4 space-y-4">
+        <section className="bg-white rounded-2xl p-4 shadow-sm border border-outline-variant">
+          <div className="flex justify-between items-start">
+            <div>
+              <p className="text-xs text-outline">Jami oquvchilar</p>
+              <h2 className="text-2xl font-bold text-primary">{data?.total_students || 0}</h2>
+            </div>
+            <div className="bg-secondary-container p-2 rounded-lg">
+              <span className="material-symbols-outlined text-primary">groups</span>
+            </div>
+          </div>
+        </section>
+        <TaskFilter value={taskType} onChange={setTaskType} />
+        <section className="bg-white rounded-2xl p-4 shadow-sm border border-outline-variant">
+          <h3 className="text-sm font-bold text-primary mb-3">Ozlashtirish dinamikasi (16 dars)</h3>
+          {loading ? <div className="h-[200px] flex items-center justify-center text-on-surface-variant">Yuklanmoqda...</div> :
+            <div className="h-[200px]"><TrendChart lessons={data?.lessons || []} /></div>}
+        </section>
+        {!loading && data?.insights && <InsightsBento insights={data.insights} />}
+      </main>
+    </div>
+  );
+}
+
+// === GROUP TREND ===
+function AdminGroupTrend({ groupId, onBack }) {
+  const [taskType, setTaskType] = useState("all");
+  const [data, setData] = useState(null);
+  const [groupInfo, setGroupInfo] = useState(null);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    studentAPI.getAdminGroups().then(g => {
+      const found = (g.groups || []).find(x => x.id === groupId);
+      setGroupInfo(found);
+    });
+  }, [groupId]);
+  useEffect(() => {
+    setLoading(true);
+    studentAPI.getAdminTrend(taskType, groupId)
+      .then(d => { setData(d); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, [taskType, groupId]);
+  return (
+    <div className="font-inter bg-background min-h-screen pb-24">
+      <header className="fixed top-0 left-0 w-full z-50 flex items-center justify-between px-4 bg-surface h-14 border-b border-outline-variant">
+        <div className="flex items-center gap-3">
+          <button onClick={onBack} className="active:scale-95">
+            <span className="material-symbols-outlined text-primary">arrow_back</span>
+          </button>
+          <h1 className="text-base font-bold text-primary truncate">{groupInfo?.name || "Guruh"}</h1>
+        </div>
+      </header>
+      <main className="pt-20 px-4 space-y-4">
+        <section className="relative overflow-hidden rounded-2xl p-5 text-white shadow-lg" style={{background: "linear-gradient(135deg, #003b2c 0%, #005440 100%)"}}>
+          <div className="absolute -right-4 -bottom-4 opacity-10">
+            <span className="material-symbols-outlined text-[100px]">school</span>
+          </div>
+          <div className="relative z-10">
+            {groupInfo?.rank === 1 && <span className="inline-block bg-white/20 px-2 py-0.5 rounded-full text-xs mb-2">#1 Rank</span>}
+            <h2 className="text-xl font-bold">{groupInfo?.name}</h2>
+            <p className="text-xs opacity-80">Kurator: {groupInfo?.curator_name}</p>
+            <div className="grid grid-cols-3 gap-2 mt-4">
+              <div className="bg-white/10 rounded-lg p-2 text-center">
+                <p className="text-[10px] opacity-70">Oquvchilar</p>
+                <p className="text-base font-bold">{groupInfo?.students_count || 0}</p>
+              </div>
+              <div className="bg-white/10 rounded-lg p-2 text-center">
+                <p className="text-[10px] opacity-70">Avg ball</p>
+                <p className="text-base font-bold">{groupInfo?.avg_score || 0}</p>
+              </div>
+              <div className="bg-white/10 rounded-lg p-2 text-center">
+                <p className="text-[10px] opacity-70">Reyting</p>
+                <p className="text-base font-bold">#{groupInfo?.rank || "-"}</p>
+              </div>
+            </div>
+          </div>
+        </section>
+        <TaskFilter value={taskType} onChange={setTaskType} />
+        <section className="bg-white rounded-2xl p-4 shadow-sm border border-outline-variant">
+          <h3 className="text-sm font-bold text-primary mb-3 flex items-center gap-2">
+            <span className="material-symbols-outlined text-base">trending_up</span>
+            Trend ({taskType === "all" ? "Hammasi" : taskType})
+          </h3>
+          {loading ? <div className="h-[200px] flex items-center justify-center text-on-surface-variant">Yuklanmoqda...</div> :
+            <div className="h-[200px]"><TrendChart lessons={data?.lessons || []} /></div>}
+        </section>
+        {!loading && data?.insights && <InsightsBento insights={data.insights} />}
       </main>
     </div>
   );
