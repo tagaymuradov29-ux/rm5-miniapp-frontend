@@ -76,86 +76,134 @@ export default function App() {
 // ============== HOME TAB ==============
 function HomeTab({ profile, scores, ranking }) {
   const initials = profile?.full_name?.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase() || '??';
+  const percentage = scores?.percentage || 0;
 
   return (
-    <>
-      <div className="bg-gradient-to-br from-primary to-primary-dark text-white p-6 rounded-b-card shadow-card">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="w-14 h-14 rounded-full bg-white/20 backdrop-blur flex items-center justify-center text-xl font-bold">
+    <div className="font-inter bg-background min-h-screen pb-24">
+      {/* Hero Card */}
+      <section className="mx-4 mt-4 rounded-2xl p-5 text-white shadow-lg relative overflow-hidden"
+        style={{ background: 'linear-gradient(135deg, #005440 0%, #0F6E56 100%)' }}>
+        <div className="absolute -right-8 -top-8 w-32 h-32 bg-white/10 rounded-full blur-3xl"></div>
+        
+        {/* Avatar + Greeting */}
+        <div className="flex items-center gap-4 mb-6 relative z-10">
+          <div className="w-14 h-14 rounded-full bg-white/20 backdrop-blur flex items-center justify-center text-xl font-bold border-2 border-white/20">
             {initials}
           </div>
           <div>
-            <div className="text-sm opacity-90">Assalomu alaykum,</div>
-            <div className="text-lg font-semibold">{profile?.full_name}</div>
+            <p className="text-sm text-white/80">Assalomu alaykum,</p>
+            <h2 className="text-xl font-bold">{profile?.full_name}</h2>
           </div>
         </div>
 
-        <div className="text-center my-6">
-          <div className="text-5xl font-bold mb-1">💎 {scores?.total}</div>
-          <div className="text-sm opacity-90">/ {scores?.max_total} ball</div>
-        </div>
-
-        <div className="bg-white/10 backdrop-blur rounded-card p-3">
-          <div className="flex justify-between text-sm mb-2">
-            <span>Sizning natijangiz</span>
-            <span className="font-semibold">{scores?.percentage}%</span>
+        {/* Stats Grid */}
+        <div className="grid grid-cols-2 gap-3 mb-5 relative z-10">
+          <div className="bg-white/10 p-3 rounded-xl backdrop-blur-sm">
+            <p className="text-xs text-white/70 mb-1">Joriy ball</p>
+            <p className="text-lg font-bold">💎 {scores?.total || 0}</p>
           </div>
-          <div className="h-2 bg-white/20 rounded-full overflow-hidden">
-            <div 
-              className="h-full bg-accent rounded-full transition-all duration-1000"
-              style={{ width: `${scores?.percentage}%` }}
-            />
+          <div className="bg-white/10 p-3 rounded-xl backdrop-blur-sm">
+            <p className="text-xs text-white/70 mb-1">Reyting</p>
+            <p className="text-lg font-bold">🏆 {ranking?.group_position || '-'} / {ranking?.group_total || '-'}</p>
           </div>
         </div>
-      </div>
 
-      <div className="p-4 space-y-3">
-        {/* Ranking card */}
-        {ranking && (
-          <div className="card bg-gradient-to-r from-accent/10 to-accent/5 border border-accent/20">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-xs text-text-secondary mb-1">🏆 Sizning o'rningiz</div>
-                <div className="flex items-baseline gap-2">
-                  <span className="text-2xl font-bold">{ranking.group_position}</span>
-                  <span className="text-sm text-text-secondary">/ {ranking.group_total} guruh</span>
-                </div>
-              </div>
-              <div className="text-right">
-                <div className="text-xs text-text-secondary mb-1">Kursda</div>
-                <div className="flex items-baseline gap-2">
-                  <span className="text-2xl font-bold">{ranking.course_position}</span>
-                  <span className="text-sm text-text-secondary">/ {ranking.course_total}</span>
-                </div>
-              </div>
+        {/* Progress */}
+        <div className="relative z-10">
+          <div className="flex justify-between items-end mb-2">
+            <p className="text-xs text-white/90">Natijangiz: {percentage}%</p>
+            <span className="text-xs font-bold text-secondary-container">{scores?.total || 0} / {scores?.max_total || 1970}</span>
+          </div>
+          <div className="h-2 w-full bg-white/20 rounded-full overflow-hidden">
+            <div className="h-full bg-secondary-container rounded-full transition-all duration-1000"
+              style={{ width: percentage + '%', boxShadow: '0 0 12px rgba(254,174,44,0.4)' }}></div>
+          </div>
+        </div>
+      </section>
+
+      {/* Quick Action Grid */}
+      <section className="mx-4 mt-4 grid grid-cols-2 gap-3">
+        <button onClick={() => window.Telegram?.WebApp?.close()} className="bg-white p-4 rounded-2xl shadow-sm border border-outline-variant/30 flex flex-col items-start gap-2 active:scale-95 transition-transform">
+          <span className="material-symbols-outlined text-primary p-2 bg-primary-fixed rounded-lg">description</span>
+          <span className="text-sm font-semibold text-on-surface text-left">📒 Konspekt yuborish</span>
+        </button>
+        <button onClick={() => window.Telegram?.WebApp?.close()} className="bg-white p-4 rounded-2xl shadow-sm border border-outline-variant/30 flex flex-col items-start gap-2 active:scale-95 transition-transform">
+          <span className="material-symbols-outlined text-primary p-2 bg-primary-fixed rounded-lg">book</span>
+          <span className="text-sm font-semibold text-on-surface text-left">📘 Workbook</span>
+        </button>
+        <button onClick={() => window.Telegram?.WebApp?.close()} className="bg-white p-4 rounded-2xl shadow-sm border border-outline-variant/30 flex flex-col items-start gap-2 active:scale-95 transition-transform">
+          <span className="material-symbols-outlined text-primary p-2 bg-primary-fixed rounded-lg">handyman</span>
+          <span className="text-sm font-semibold text-on-surface text-left">🛠 Amaliy</span>
+        </button>
+        <button onClick={() => window.Telegram?.WebApp?.close()} className="bg-white p-4 rounded-2xl shadow-sm border border-outline-variant/30 flex flex-col items-start gap-2 active:scale-95 transition-transform">
+          <span className="material-symbols-outlined text-primary p-2 bg-primary-fixed rounded-lg">movie_filter</span>
+          <span className="text-sm font-semibold text-on-surface text-left">🎬 Reels</span>
+        </button>
+      </section>
+
+      {/* Course Ranking Card */}
+      {ranking && (
+        <section className="mx-4 mt-4 bg-white rounded-2xl p-4 shadow-sm border border-outline-variant/30">
+          <h3 className="text-sm font-semibold text-on-surface-variant mb-3">🏆 Sizning o'rningiz</h3>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="text-center p-3 bg-primary-container/10 rounded-xl">
+              <p className="text-xs text-on-surface-variant mb-1">Guruhda</p>
+              <p className="text-2xl font-bold text-primary">{ranking.group_position}/{ranking.group_total}</p>
+            </div>
+            <div className="text-center p-3 bg-secondary-container/20 rounded-xl">
+              <p className="text-xs text-on-surface-variant mb-1">Kursda</p>
+              <p className="text-2xl font-bold text-secondary">{ranking.course_position}/{ranking.course_total}</p>
             </div>
           </div>
-        )}
+        </section>
+      )}
 
-        {/* Group info */}
-        <div className="card flex items-center justify-between">
-          <div>
-            <div className="text-xs text-text-secondary">Guruh</div>
-            <div className="font-semibold">{profile?.group_name}</div>
-          </div>
-          <div className="text-right">
-            <div className="text-xs text-text-secondary">Kurator</div>
-            <div className="font-semibold">{profile?.curator_name}</div>
-          </div>
+      {/* Group info */}
+      <section className="mx-4 mt-4 bg-white rounded-2xl p-4 shadow-sm border border-outline-variant/30 flex items-center justify-between">
+        <div>
+          <p className="text-xs text-on-surface-variant mb-1">Guruh</p>
+          <p className="font-semibold text-on-surface">{profile?.group_name}</p>
         </div>
+        <div className="text-right">
+          <p className="text-xs text-on-surface-variant mb-1">Kurator</p>
+          <p className="font-semibold text-on-surface">{profile?.curator_name}</p>
+        </div>
+      </section>
 
-        {/* Scores breakdown */}
-        <h2 className="text-lg font-semibold mt-4 mb-2">📊 Ballaringiz</h2>
-        <div className="space-y-2">
-          <ScoreRow icon="📒" label="Konspekt" earned={scores?.konspekt || 0} max={160} />
-          <ScoreRow icon="📘" label="Workbook" earned={scores?.workbook || 0} max={320} />
-          <ScoreRow icon="🛠" label="Amaliy" earned={scores?.amaliy || 0} max={400} />
-          <ScoreRow icon="🧪" label="Test" earned={scores?.test || 0} max={320} />
-          <ScoreRow icon="🏆" label="Workshop" earned={scores?.workshop || 0} max={250} />
-          <ScoreRow icon="📸" label="Instagram" earned={scores?.instagram || 0} max={520} />
+      {/* Scores breakdown */}
+      <section className="mx-4 mt-4 bg-white rounded-2xl p-4 shadow-sm border border-outline-variant/30">
+        <h3 className="text-sm font-semibold text-on-surface-variant mb-3 flex items-center gap-2">
+          <span className="material-symbols-outlined text-[18px]">analytics</span>
+          Ballar taqsimoti
+        </h3>
+        <div className="space-y-3">
+          <ScoreBar icon="📒" label="Konspekt" earned={scores?.konspekt || 0} max={160} />
+          <ScoreBar icon="📘" label="Workbook" earned={scores?.workbook || 0} max={320} />
+          <ScoreBar icon="🛠" label="Amaliy" earned={scores?.amaliy || 0} max={400} />
+          <ScoreBar icon="🧪" label="Test" earned={scores?.test || 0} max={320} />
+          <ScoreBar icon="🏆" label="Workshop" earned={scores?.workshop || 0} max={250} />
+          <ScoreBar icon="📸" label="Instagram" earned={scores?.instagram || 0} max={520} />
+          {scores?.extra > 0 && (
+            <ScoreBar icon="⭐" label="Qo'shimcha" earned={scores.extra} max={scores.extra} />
+          )}
         </div>
+      </section>
+    </div>
+  );
+}
+
+function ScoreBar({ icon, label, earned, max }) {
+  const pct = max > 0 ? Math.min(100, (earned / max) * 100) : 0;
+  return (
+    <div className="space-y-1.5">
+      <div className="flex justify-between text-sm">
+        <span className="text-on-surface">{icon} {label}</span>
+        <span className="text-on-surface-variant font-medium">{earned} / {max}</span>
       </div>
-    </>
+      <div className="h-2 bg-surface-container rounded-full overflow-hidden">
+        <div className="h-full bg-primary rounded-full transition-all duration-700" style={{ width: pct + '%' }}></div>
+      </div>
+    </div>
   );
 }
 
