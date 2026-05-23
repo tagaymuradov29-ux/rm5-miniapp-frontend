@@ -110,19 +110,47 @@ export default function App() {
   );
 }
 
-// ============== ADMIN PANEL (placeholder) ==============
+// ============== ADMIN PANEL (real data) ==============
 function AdminPanel({ authData, telegramId }) {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    studentAPI.getAdminDashboard()
+      .then(d => { setData(d); setLoading(false); })
+      .catch(e => { setError(e.message); setLoading(false); });
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="font-inter bg-background min-h-screen flex items-center justify-center">
+        <div className="text-on-surface-variant">⏳ Yuklanmoqda...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="font-inter bg-background min-h-screen p-4 flex items-center justify-center">
+        <div className="bg-white rounded-2xl p-4 shadow text-center max-w-sm">
+          <div className="text-4xl mb-2">⚠️</div>
+          <div className="font-semibold mb-1">Xato</div>
+          <div className="text-sm text-on-surface-variant">{error}</div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="font-inter bg-background min-h-screen pb-24">
       {/* Top App Bar */}
       <header className="fixed top-0 left-0 w-full z-50 flex items-center justify-between px-4 bg-surface h-14 border-b border-outline-variant">
-        <div className="flex items-center gap-3">
-          <h1 className="text-base font-bold text-primary">🏠 Bosh sahifa</h1>
-        </div>
+        <h1 className="text-base font-bold text-primary">🏠 Bosh sahifa</h1>
         <span className="material-symbols-outlined text-on-surface-variant">more_vert</span>
       </header>
 
-      <main className="pt-20 px-4 space-y-4">
+      <main className="pt-20 px-4 space-y-5">
         {/* Hero Card */}
         <section className="relative overflow-hidden rounded-2xl p-5 text-white shadow-lg" 
           style={{background: 'linear-gradient(135deg, #003b2c 0%, #005440 100%)'}}>
@@ -132,33 +160,138 @@ function AdminPanel({ authData, telegramId }) {
             <h2 className="text-xl font-bold mb-4">👋 Salom, {authData?.full_name}!</h2>
             <div className="grid grid-cols-3 gap-3">
               <div className="bg-white/10 backdrop-blur-sm rounded-lg p-2 text-center">
-                <p className="text-[10px] opacity-80">O'quvchilar</p>
-                <p className="text-lg font-bold">46</p>
+                <p className="text-[10px] opacity-80">O\'quvchilar</p>
+                <p className="text-lg font-bold">{data?.stats?.total_students || 0}</p>
               </div>
               <div className="bg-white/10 backdrop-blur-sm rounded-lg p-2 text-center">
                 <p className="text-[10px] opacity-80">Guruhlar</p>
-                <p className="text-lg font-bold">3</p>
+                <p className="text-lg font-bold">{data?.stats?.total_groups || 0}</p>
               </div>
               <div className="bg-white/10 backdrop-blur-sm rounded-lg p-2 text-center">
                 <p className="text-[10px] opacity-80">Darslar</p>
-                <p className="text-lg font-bold">16/16</p>
+                <p className="text-lg font-bold">{data?.stats?.unlocked_lessons || 0}/{data?.stats?.total_lessons || 0}</p>
               </div>
             </div>
           </div>
         </section>
 
-        {/* Placeholder */}
-        <section className="bg-white rounded-2xl p-6 shadow-sm border border-outline-variant text-center">
-          <span className="material-symbols-outlined text-5xl text-primary mb-2">construction</span>
-          <h3 className="text-lg font-bold text-on-surface mb-2">Admin Panel qurilmoqda</h3>
-          <p className="text-sm text-on-surface-variant mb-4">
-            Tez orada barcha funksiyalar qo'shiladi.
-          </p>
-          <div className="bg-primary/5 rounded-xl p-3 text-left">
-            <p className="text-xs text-on-surface-variant mb-1">Sizning rolingiz:</p>
-            <p className="text-sm font-bold text-primary">{authData?.role}</p>
-            <p className="text-xs text-on-surface-variant mt-2 mb-1">Telegram ID:</p>
-            <p className="text-sm font-mono text-on-surface">{telegramId}</p>
+        {/* Bugungi Holat */}
+        <section>
+          <h3 className="text-base font-bold mb-2 text-on-surface px-1">Bugungi Holat</h3>
+          <div className="space-y-2">
+            {/* Pending submissions */}
+            <button className="w-full flex items-center p-4 bg-white border border-outline-variant rounded-2xl shadow-sm active:scale-[0.98] transition-transform">
+              <div className="w-10 h-10 rounded-full bg-yellow-100 flex items-center justify-center mr-3 flex-shrink-0">
+                <span className="material-symbols-outlined text-yellow-700">task</span>
+              </div>
+              <div className="flex-1 text-left">
+                <p className="text-sm font-semibold text-yellow-900">
+                  {data?.pending?.submissions || 0} ta vazifa kutmoqda
+                </p>
+                <p className="text-xs text-outline">Tekshirilishi zarur</p>
+              </div>
+              <span className="material-symbols-outlined text-outline">chevron_right</span>
+            </button>
+
+            {/* Pending users */}
+            <button className="w-full flex items-center p-4 bg-white border border-outline-variant rounded-2xl shadow-sm active:scale-[0.98] transition-transform">
+              <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center mr-3 flex-shrink-0">
+                <span className="material-symbols-outlined text-blue-700">list_alt</span>
+              </div>
+              <div className="flex-1 text-left">
+                <p className="text-sm font-semibold text-blue-900">
+                  {data?.pending?.users || 0} ta yangi ro\'yxat
+                </p>
+                <p className="text-xs text-outline">Guruh shakllantirish</p>
+              </div>
+              <span className="material-symbols-outlined text-outline">chevron_right</span>
+            </button>
+
+            {/* Pending fines */}
+            <button className="w-full flex items-center p-4 bg-white border border-outline-variant rounded-2xl shadow-sm active:scale-[0.98] transition-transform">
+              <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center mr-3 flex-shrink-0">
+                <span className="material-symbols-outlined text-red-700">payments</span>
+              </div>
+              <div className="flex-1 text-left">
+                <p className="text-sm font-semibold text-red-900">
+                  {data?.pending?.fines || 0} ta jarima to\'lov
+                </p>
+                <p className="text-xs text-outline">Tasdiqlash kutilmoqda</p>
+              </div>
+              <span className="material-symbols-outlined text-outline">chevron_right</span>
+            </button>
+          </div>
+        </section>
+
+        {/* Tezkor Harakatlar */}
+        <section>
+          <h3 className="text-base font-bold mb-2 text-on-surface px-1">Tezkor Harakatlar</h3>
+          <div className="grid grid-cols-2 gap-3">
+            <button className="flex flex-col items-center p-4 bg-white border border-outline-variant rounded-2xl shadow-sm active:scale-95 transition-transform">
+              <div className="w-12 h-12 rounded-xl bg-primary-container/10 flex items-center justify-center mb-2">
+                <span className="material-symbols-outlined text-primary-container">send</span>
+              </div>
+              <span className="text-xs font-medium text-on-surface">📤 Massa xabar</span>
+            </button>
+            <button className="flex flex-col items-center p-4 bg-white border border-outline-variant rounded-2xl shadow-sm active:scale-95 transition-transform">
+              <div className="w-12 h-12 rounded-xl bg-primary-container/10 flex items-center justify-center mb-2">
+                <span className="material-symbols-outlined text-primary-container">featured_seasonal_and_gifts</span>
+              </div>
+              <span className="text-xs font-medium text-on-surface">🎁 Bonus berish</span>
+            </button>
+            <button className="flex flex-col items-center p-4 bg-white border border-outline-variant rounded-2xl shadow-sm active:scale-95 transition-transform">
+              <div className="w-12 h-12 rounded-xl bg-primary-container/10 flex items-center justify-center mb-2">
+                <span className="material-symbols-outlined text-primary-container">description</span>
+              </div>
+              <span className="text-xs font-medium text-on-surface">📥 Excel eksport</span>
+            </button>
+            <button className="flex flex-col items-center p-4 bg-white border border-outline-variant rounded-2xl shadow-sm active:scale-95 transition-transform">
+              <div className="w-12 h-12 rounded-xl bg-primary-container/10 flex items-center justify-center mb-2">
+                <span className="material-symbols-outlined text-primary-container">settings</span>
+              </div>
+              <span className="text-xs font-medium text-on-surface">⚙️ Sozlamalar</span>
+            </button>
+          </div>
+        </section>
+
+        {/* Oxirgi Harakatlar */}
+        <section>
+          <div className="flex justify-between items-center mb-2 px-1">
+            <h3 className="text-base font-bold text-on-surface">Oxirgi Harakatlar</h3>
+            <button className="text-xs font-medium text-primary">Hammasi</button>
+          </div>
+          <div className="bg-surface-container-low rounded-2xl p-2 space-y-1">
+            {(!data?.recent_activity || data.recent_activity.length === 0) && (
+              <div className="text-center py-4 text-sm text-on-surface-variant">
+                Hozircha harakatlar yo\'q
+              </div>
+            )}
+            {data?.recent_activity?.map((a, i) => {
+              const time = a.time ? new Date(a.time).toLocaleTimeString('uz', {hour:'2-digit', minute:'2-digit'}) : '';
+              const typeNames = {KONSPEKT:'Konspekt', WORKBOOK:'Workbook', AMALIY:'Amaliy', INSTAGRAM_REELS:'Reels', INSTAGRAM_STORIES:'Stories'};
+              let text = '';
+              if (a.type === 'submission_approved') {
+                const sub = typeNames[a.sub_type] || a.sub_type;
+                const lesson = a.lesson_num ? a.lesson_num + '-dars ' : '';
+                text = a.user_name + ' — ' + lesson + sub + ' +' + a.score + ' ball';
+              } else if (a.type === 'new_user') {
+                text = 'Yangi: ' + a.user_name;
+              }
+              return (
+                <div key={i} className="flex items-center p-3 bg-white rounded-lg">
+                  <div className="w-8 h-8 rounded-full bg-secondary-container flex items-center justify-center mr-3">
+                    <span className="material-symbols-outlined text-on-secondary-container text-[18px]">
+                      {a.type === 'new_user' ? 'person_add' : 'check_circle'}
+                    </span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-on-surface truncate">
+                      <span className="font-bold text-primary">{time}</span> — {text}
+                    </p>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </section>
       </main>
