@@ -42,6 +42,9 @@ export const studentAPI = {
   async getLessonDetails(telegramId, lessonId) {
     return apiFetch(`/api/student/${telegramId}/lesson/${lessonId}`);
   },
+  async getDashboard(telegramId) {
+    return apiFetch(`/api/student/${telegramId}/dashboard`);
+  },
 };
 
 /**

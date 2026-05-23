@@ -4,6 +4,7 @@ import { studentAPI, getTelegramUser, initTelegramWebApp } from './api';
 export default function App() {
   const [user, setUser] = useState(null);
   const [selectedLessonId, setSelectedLessonId] = useState(null);
+  const [dashboard, setDashboard] = useState(null);
   const [profile, setProfile] = useState(null);
   const [scores, setScores] = useState(null);
   const [lessons, setLessons] = useState([]);
@@ -24,17 +25,19 @@ export default function App() {
       if (!tgUser || tgUser._error) throw new Error("Telegram foydalanuvchi topilmadi. Debug: " + (tgUser?._debug || "null"));
       setUser(tgUser);
 
-      const [profileData, scoresData, lessonsData, rankingData] = await Promise.all([
+      const [profileData, scoresData, lessonsData, rankingData, dashboardData] = await Promise.all([
         studentAPI.getProfile(tgUser.id),
         studentAPI.getScores(tgUser.id),
         studentAPI.getLessons(tgUser.id),
         studentAPI.getRanking(tgUser.id),
+        studentAPI.getDashboard(tgUser.id).catch(() => null),
       ]);
 
       setProfile(profileData);
       setScores(scoresData);
       setLessons(lessonsData.lessons || []);
       setRanking(rankingData);
+      setDashboard(dashboardData);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -75,7 +78,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen pb-24">
-      {activeTab === 'home' && <HomeTab profile={profile} scores={scores} ranking={ranking} />}
+      {activeTab === 'home' && <HomeTab profile={profile} scores={scores} ranking={ranking} dashboard={dashboard} onSelectLesson={setSelectedLessonId} />}
       {activeTab === 'lessons' && <LessonsTab lessons={lessons} onSelectLesson={setSelectedLessonId} />}
       {activeTab === 'ranking' && <RankingTab ranking={ranking} />}
       {activeTab === 'profile' && <ProfileTab profile={profile} user={user} />}
@@ -86,7 +89,7 @@ export default function App() {
 }
 
 // ============== HOME TAB ==============
-function HomeTab({ profile, scores, ranking }) {
+function HomeTab({ profile, scores, ranking, dashboard, onSelectLesson }) {
   const initials = profile?.full_name?.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase() || '??';
   const percentage = scores?.percentage || 0;
 
@@ -153,7 +156,111 @@ function HomeTab({ profile, scores, ranking }) {
         </button>
       </section>
 
-      {/* Course Ranking Card */}
+      {/* Haftalik faollik */}
+      {dashboard?.weekly_activity && (
+        <section className="mx-4 mt-4">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-semibold text-on-surface">Haftalik faollik</h3>
+            <span className="text-xs font-bold text-primary">{dashboard.active_days_count}/7 kun</span>
+          </div>
+          <div className="flex justify-between px-1">
+            {dashboard.weekly_activity.map((d, i) => (
+              <div key={i} className="flex flex-col items-center gap-1">
+                <div className={'p-0.5 rounded-full border-2 ' + (d.active ? 'border-primary-container' : 'border-outline-variant')}>
+                  <div className={'w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold ' + (d.active ? 'bg-primary-container text-white' : 'bg-surface-container-high text-outline')}>
+                    {d.label}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Davomat + Jarima */}
+      {dashboard && (
+        <section className="mx-4 mt-4 grid grid-cols-2 gap-3">
+          <div className="bg-white p-4 rounded-2xl shadow-sm border border-outline-variant/30">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="material-symbols-outlined text-primary text-xl">event_available</span>
+              <span className="text-sm font-semibold text-on-surface">Davomat</span>
+            </div>
+            <div className="flex flex-col gap-1">
+              <div className="flex items-center gap-1.5">
+                <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                <span className="text-xs font-medium text-on-surface-variant">Keldi: {dashboard.attendance.present}</span>
+              </div>
+              <span className="text-xs text-outline ml-3.5">Kechikdi: {dashboard.attendance.late}</span>
+              <span className="text-xs text-outline ml-3.5">Kelmadi: {dashboard.attendance.absent}</span>
+            </div>
+          </div>
+          <div className="bg-white p-4 rounded-2xl shadow-sm border border-outline-variant/30">
+            <div className="flex items-center gap-2 mb-2">
+              <span className={'material-symbols-outlined text-xl ' + (dashboard.fines.unpaid_uzs > 0 ? 'text-error' : 'text-primary')}>payments</span>
+              <span className="text-sm font-semibold text-on-surface">Jarimalar</span>
+            </div>
+            <p className="text-xs font-medium text-outline">Jarima: {(dashboard.fines.unpaid_uzs || 0).toLocaleString()} so'm</p>
+            <div className={'mt-1 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ' + (dashboard.fines.unpaid_uzs > 0 ? 'bg-error-container text-error' : 'bg-primary/10 text-primary')}>
+              {dashboard.fines.unpaid_uzs > 0 ? "To'lash kerak" : 'Toza'}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* Upcoming Lesson */}
+      {dashboard?.upcoming_lesson && (
+        <section onClick={() => onSelectLesson && onSelectLesson(dashboard.upcoming_lesson.lesson_id)} 
+          className="mx-4 mt-4 p-5 rounded-2xl text-white relative overflow-hidden shadow-md cursor-pointer active:scale-[0.98] transition-transform"
+          style={{background: 'linear-gradient(135deg, #004D76 0%, #00669B 100%)'}}>
+          <div className="absolute -right-4 -bottom-4 w-24 h-24 bg-white/5 rounded-full blur-xl"></div>
+          <div className="flex justify-between items-start relative z-10 gap-3">
+            <div className="flex-1">
+              <h3 className="text-base font-bold mb-2">📚 {dashboard.upcoming_lesson.lesson_number}-dars: {dashboard.upcoming_lesson.title}</h3>
+              {dashboard.upcoming_lesson.speaker && (
+                <p className="text-xs text-white/80 mb-2">👨‍🏫 {dashboard.upcoming_lesson.speaker}</p>
+              )}
+              <div className="flex items-center gap-2 text-white/90">
+                <span className="material-symbols-outlined text-[16px]">calendar_today</span>
+                <p className="text-xs">{new Date(dashboard.upcoming_lesson.lesson_date).toLocaleString('uz', {day:'numeric', month:'long', hour:'2-digit', minute:'2-digit'})}</p>
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* Recent Activity */}
+      {dashboard?.recent_activity?.length > 0 && (
+        <section className="mx-4 mt-4 mb-2">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-base font-bold text-on-surface">Oxirgi harakatlar</h3>
+          </div>
+          <div className="flex flex-col gap-2">
+            {dashboard.recent_activity.slice(0, 5).map((a, i) => {
+              const typeNames = {KONSPEKT:'Konspekt', WORKBOOK:'Workbook', AMALIY:'Amaliy', INSTAGRAM_REELS:'Reels', INSTAGRAM_STORIES:'Stories'};
+              const typeIcons = {KONSPEKT:'description', WORKBOOK:'book', AMALIY:'handyman', INSTAGRAM_REELS:'movie_filter', INSTAGRAM_STORIES:'photo_library'};
+              const name = typeNames[a.type] || a.type;
+              const icon = typeIcons[a.type] || 'check_circle';
+              const title = a.lesson_number ? a.lesson_number + '-dars ' + name : name;
+              return (
+                <div key={i} className="bg-white px-4 py-3 rounded-xl border border-outline-variant/30 flex items-center justify-between shadow-sm">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                      <span className="material-symbols-outlined text-[20px]">{icon}</span>
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-on-surface">{title}</p>
+                      <p className="text-xs text-outline">{a.status === 'APPROVED' ? 'Qabul qilindi' : a.status}</p>
+                    </div>
+                  </div>
+                  <span className="text-sm font-bold text-primary-container">+ {a.score} ball</span>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
+            {/* Course Ranking Card */}
       {ranking && (
         <section className="mx-4 mt-4 bg-white rounded-2xl p-4 shadow-sm border border-outline-variant/30">
           <h3 className="text-sm font-semibold text-on-surface-variant mb-3">🏆 Sizning o'rningiz</h3>
