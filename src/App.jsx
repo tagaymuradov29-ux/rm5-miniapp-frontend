@@ -115,6 +115,7 @@ function AdminPanel({ authData, telegramId }) {
   const [adminTab, setAdminTab] = useState('home');  // home / management / stats / settings
   const [mngSubPage, setMngSubPage] = useState(null); // null / users / lessons / tasks / projects / bonus
   const [usersSubPage, setUsersSubPage] = useState(null); // null / approved / pending / groups / curators / assistants / blocked
+  const [selectedStudentId, setSelectedStudentId] = useState(null);
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -150,7 +151,8 @@ function AdminPanel({ authData, telegramId }) {
       {adminTab === 'home' && <AdminHome authData={authData} data={data} onNavigate={setAdminTab} />}
       {adminTab === 'management' && !mngSubPage && <AdminManagement onNavigate={setAdminTab} onSubPage={setMngSubPage} />}
       {adminTab === 'management' && mngSubPage === 'users' && !usersSubPage && <AdminUsersMenu onBack={() => setMngSubPage(null)} onSubPage={setUsersSubPage} />}
-      {adminTab === 'management' && mngSubPage === 'users' && usersSubPage === 'approved' && <AdminStudentsList onBack={() => setUsersSubPage(null)} />}
+      {adminTab === 'management' && mngSubPage === 'users' && usersSubPage === 'approved' && !selectedStudentId && <AdminStudentsList onBack={() => setUsersSubPage(null)} onSelectStudent={setSelectedStudentId} />}
+      {adminTab === 'management' && mngSubPage === 'users' && usersSubPage === 'approved' && selectedStudentId && <AdminStudentDetail userId={selectedStudentId} onBack={() => setSelectedStudentId(null)} />}
       {adminTab === 'stats' && <AdminStats />}
       {adminTab === 'settings' && <AdminSettings />}
       
@@ -529,7 +531,7 @@ function AdminUsersMenu({ onBack, onSubPage }) {
 }
 
 // ============== ADMIN STUDENTS LIST (46 ta o'quvchi) ==============
-function AdminStudentsList({ onBack }) {
+function AdminStudentsList({ onBack, onSelectStudent }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -634,7 +636,7 @@ function AdminStudentsList({ onBack }) {
               const initials = st.full_name?.split(' ').map(n => n[0]).slice(0,2).join('').toUpperCase() || '??';
               const medal = st.rank === 1 ? '🥇' : st.rank === 2 ? '🥈' : st.rank === 3 ? '🥉' : null;
               return (
-                <button key={st.id} onClick={() => alert(st.full_name + ' tafsilotlari tez orada')}
+                <button key={st.id} onClick={() => onSelectStudent(st.id)}
                   className="w-full bg-white rounded-2xl p-3 shadow-sm border border-outline-variant flex items-center gap-3 active:scale-[0.98] transition-transform">
                   <div className="w-12 h-12 rounded-full bg-primary-fixed flex items-center justify-center text-primary font-bold flex-shrink-0">
                     {medal || initials}
@@ -658,6 +660,208 @@ function AdminStudentsList({ onBack }) {
             })
           )}
         </div>
+      </main>
+    </div>
+  );
+}
+
+// ============== ADMIN STUDENT DETAIL ==============
+function AdminStudentDetail({ userId, onBack }) {
+  const [s, setS] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    studentAPI.getAdminStudentDetail(userId)
+      .then(d => { setS(d); setLoading(false); })
+      .catch(e => { setError(e.message); setLoading(false); });
+  }, [userId]);
+
+  if (loading) {
+    return <div className="font-inter bg-background min-h-screen flex items-center justify-center"><div>Yuklanmoqda...</div></div>;
+  }
+  if (error || !s) {
+    return <div className="font-inter bg-background min-h-screen p-4 flex items-center justify-center"><div className="text-center"><div className="text-4xl">!</div><p>{error || 'Topilmadi'}</p></div></div>;
+  }
+
+  const initials = s.full_name?.split(' ').map(n => n[0]).slice(0,2).join('').toUpperCase() || '??';
+  const maxScore = 1970;
+  const progressPct = Math.min(100, Math.round((s.total_score / maxScore) * 100));
+  const regDate = s.registered_at ? new Date(s.registered_at).toLocaleDateString('uz', {day:'numeric', month:'long', year:'numeric'}) : '-';
+  
+  const scoreCards = [
+    { icon: 'description', label: 'Konspekt', value: s.scores.konspekt },
+    { icon: 'menu_book', label: 'Workbook', value: s.scores.workbook },
+    { icon: 'handyman', label: 'Amaliy', value: s.scores.amaliy },
+    { icon: 'quiz', label: 'Test', value: s.scores.test },
+    { icon: 'forum', label: 'Workshop', value: s.scores.workshop },
+    { icon: 'photo_camera', label: 'Stories', value: s.scores.stories },
+    { icon: 'play_circle', label: 'Reels', value: s.scores.reels },
+  ];
+
+  return (
+    <div className="font-inter bg-background min-h-screen pb-24">
+      <header className="fixed top-0 left-0 w-full z-50 flex items-center justify-between px-4 bg-surface h-14 border-b border-outline-variant">
+        <div className="flex items-center gap-3">
+          <button onClick={onBack} className="active:scale-95">
+            <span className="material-symbols-outlined text-primary">arrow_back</span>
+          </button>
+          <h1 className="text-base font-bold text-primary truncate">{s.full_name}</h1>
+        </div>
+        <span className="material-symbols-outlined text-on-surface-variant">more_vert</span>
+      </header>
+
+      <main className="pt-20 px-4 space-y-4">
+        <section className="bg-white rounded-2xl p-5 shadow-sm border border-outline-variant flex flex-col items-center text-center">
+          <div className="relative w-24 h-24 mb-3">
+            <div className="w-full h-full rounded-full bg-primary-fixed border-4 border-primary flex items-center justify-center text-2xl font-bold text-primary">
+              {initials}
+            </div>
+            <div className="absolute bottom-0 right-0 bg-primary p-1.5 rounded-full border-2 border-white">
+              <span className="material-symbols-outlined text-white text-base" style={{fontVariationSettings: "'FILL' 1"}}>verified</span>
+            </div>
+          </div>
+          <h2 className="text-lg font-bold text-on-surface">{s.full_name}</h2>
+          {s.username && <p className="text-xs text-outline tracking-wider mb-3">@{s.username}</p>}
+          <div className="w-full grid grid-cols-2 gap-3 text-left border-t border-outline-variant pt-3 mt-2">
+            <div>
+              <p className="text-[10px] text-outline">Telefon</p>
+              <p className="text-xs text-on-surface">{s.phone || '-'}</p>
+            </div>
+            <div>
+              <p className="text-[10px] text-outline">Telegram ID</p>
+              <p className="text-xs text-on-surface font-mono">{s.telegram_id}</p>
+            </div>
+            <div className="col-span-2">
+              <p className="text-[10px] text-outline">Qoshilgan sana</p>
+              <p className="text-xs text-on-surface">{regDate}</p>
+            </div>
+          </div>
+        </section>
+
+        <section className="bg-white rounded-2xl p-4 shadow-sm border border-outline-variant flex items-center justify-between">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 rounded-lg bg-secondary-container flex items-center justify-center flex-shrink-0">
+              <span className="material-symbols-outlined text-primary">groups</span>
+            </div>
+            <div className="min-w-0">
+              <h3 className="text-sm font-bold text-on-surface truncate">{s.group_name || 'Guruh yoq'}</h3>
+              <p className="text-xs text-outline truncate">{s.curator_name ? 'Kurator: ' + s.curator_name : ''}</p>
+            </div>
+          </div>
+          <button className="px-3 py-1.5 bg-surface-container-high text-primary rounded-lg text-xs font-medium flex-shrink-0">
+            Ozgartirish
+          </button>
+        </section>
+
+        <section className="bg-primary-container rounded-2xl p-4 text-white shadow">
+          <div className="flex justify-between items-end mb-2">
+            <div>
+              <p className="text-[10px] opacity-80">Umumiy ball</p>
+              <p className="text-2xl font-bold">{s.total_score} <span className="text-xs opacity-60">/{maxScore}</span></p>
+            </div>
+            <div className="text-right">
+              <p className="text-[10px] opacity-80">Reyting</p>
+              <p className="text-lg font-bold">#{s.rank}</p>
+            </div>
+          </div>
+          <div className="h-1.5 bg-white/20 rounded-full overflow-hidden">
+            <div className="h-full bg-primary-fixed rounded-full" style={{width: progressPct + '%'}}></div>
+          </div>
+        </section>
+
+        <section>
+          <h3 className="text-xs font-bold tracking-widest text-outline uppercase px-1 mb-2">BALLAR TAHLILI</h3>
+          <div className="grid grid-cols-2 gap-2">
+            {scoreCards.map((c, i) => (
+              <div key={i} className="bg-white p-3 rounded-2xl border border-outline-variant">
+                <span className="material-symbols-outlined text-primary text-xl mb-1">{c.icon}</span>
+                <p className="text-[10px] text-outline">{c.label}</p>
+                <p className="text-base font-bold text-on-surface">{c.value} <span className="text-xs font-normal">b.</span></p>
+              </div>
+            ))}
+            <div className="bg-secondary-container p-3 rounded-2xl flex items-center justify-between">
+              <div className="flex items-center gap-1.5">
+                <span className="material-symbols-outlined text-primary text-xl" style={{fontVariationSettings: "'FILL' 1"}}>star</span>
+                <span className="text-xs font-bold text-primary">Bonus</span>
+              </div>
+              <span className="text-base font-bold text-primary">+{s.scores.bonus}</span>
+            </div>
+          </div>
+        </section>
+
+        <section className="bg-white rounded-2xl p-4 shadow-sm border border-outline-variant">
+          <h3 className="text-sm font-bold mb-3 text-on-surface">Davomat</h3>
+          <div className="flex justify-between items-center">
+            <div className="text-center flex-1">
+              <p className="text-2xl font-bold text-primary">{s.attendance.present}</p>
+              <p className="text-[10px] text-outline">Keldi</p>
+            </div>
+            <div className="w-px h-8 bg-outline-variant"></div>
+            <div className="text-center flex-1">
+              <p className="text-2xl font-bold text-tertiary-container">{s.attendance.late}</p>
+              <p className="text-[10px] text-outline">Kechikdi</p>
+            </div>
+            <div className="w-px h-8 bg-outline-variant"></div>
+            <div className="text-center flex-1">
+              <p className="text-2xl font-bold text-error">{s.attendance.absent}</p>
+              <p className="text-[10px] text-outline">Kelmadi</p>
+            </div>
+          </div>
+        </section>
+
+        <section className={"rounded-2xl p-4 border flex items-center justify-between " + (s.fines.unpaid_uzs > 0 ? "bg-error-container/20 border-error/20" : "bg-white border-outline-variant")}>
+          <div className="flex items-center gap-3">
+            <span className={"material-symbols-outlined " + (s.fines.unpaid_uzs > 0 ? "text-error" : "text-primary")}>gavel</span>
+            <div>
+              <h3 className="text-xs font-bold">Jarima statusi</h3>
+              <p className="text-xs text-on-surface-variant">
+                {s.fines.unpaid_uzs > 0 ? 'Tolanmagan: ' + s.fines.unpaid_uzs.toLocaleString() + ' som' : 'Faol jarimalar yoq'}
+              </p>
+            </div>
+          </div>
+          <span className={"px-2 py-0.5 rounded-full text-[10px] font-medium " + (s.fines.unpaid_uzs > 0 ? "bg-error text-white" : "bg-green-100 text-green-700")}>
+            {s.fines.unpaid_uzs > 0 ? 'Bor' : 'Toza'}
+          </span>
+        </section>
+
+        <section className="space-y-2">
+          <button onClick={() => alert('Bonus berish tez orada')} className="w-full flex items-center justify-between p-4 bg-white rounded-2xl border border-outline-variant active:scale-[0.98]">
+            <div className="flex items-center gap-3">
+              <span className="material-symbols-outlined text-primary">add_circle</span>
+              <span className="text-sm">Bonus ball berish</span>
+            </div>
+            <span className="material-symbols-outlined text-outline">chevron_right</span>
+          </button>
+          <button onClick={() => alert('Xabar yuborish tez orada')} className="w-full flex items-center justify-between p-4 bg-white rounded-2xl border border-outline-variant active:scale-[0.98]">
+            <div className="flex items-center gap-3">
+              <span className="material-symbols-outlined text-primary">mail</span>
+              <span className="text-sm">Shaxsiy xabar yuborish</span>
+            </div>
+            <span className="material-symbols-outlined text-outline">chevron_right</span>
+          </button>
+          <button onClick={() => alert('Guruh ozgartirish tez orada')} className="w-full flex items-center justify-between p-4 bg-white rounded-2xl border border-outline-variant active:scale-[0.98]">
+            <div className="flex items-center gap-3">
+              <span className="material-symbols-outlined text-primary">swap_horiz</span>
+              <span className="text-sm">Guruhni ozgartirish</span>
+            </div>
+            <span className="material-symbols-outlined text-outline">chevron_right</span>
+          </button>
+          <button onClick={() => alert('Bloklash tez orada')} className="w-full flex items-center justify-between p-4 bg-white rounded-2xl border border-outline-variant active:scale-[0.98]">
+            <div className="flex items-center gap-3 text-tertiary-container">
+              <span className="material-symbols-outlined">block</span>
+              <span className="text-sm">Bloklash</span>
+            </div>
+            <span className="material-symbols-outlined text-outline">chevron_right</span>
+          </button>
+          <button onClick={() => alert('Ochirish tez orada')} className="w-full flex items-center justify-between p-4 bg-error-container/10 rounded-2xl border border-error/20 active:scale-[0.98]">
+            <div className="flex items-center gap-3 text-error">
+              <span className="material-symbols-outlined">delete</span>
+              <span className="text-sm">Ochirish</span>
+            </div>
+            <span className="material-symbols-outlined text-error/60">chevron_right</span>
+          </button>
+        </section>
       </main>
     </div>
   );
