@@ -356,7 +356,7 @@ function AdminManagement({ onNavigate, onSubPage }) {
         {/* Menu items */}
         <section className="bg-white border border-outline-variant rounded-2xl divide-y divide-outline-variant overflow-hidden shadow-sm">
           {items.map(item => (
-            <button key={item.id} onClick={() => alert(item.label + ' sahifasi tez orada qo\'shiladi')} 
+            <button key={item.id} onClick={() => item.id === 'users' ? onSubPage('users') : alert(item.label + ' sahifasi tez orada qoshiladi')} 
               className="w-full flex items-center justify-between p-4 hover:bg-surface-container-low active:scale-[0.99] transition-all">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-lg bg-primary-fixed flex items-center justify-center text-2xl">
