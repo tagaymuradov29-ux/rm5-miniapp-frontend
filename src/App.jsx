@@ -110,8 +110,9 @@ export default function App() {
   );
 }
 
-// ============== ADMIN PANEL (real data) ==============
+// ============== ADMIN PANEL (with tab navigation) ==============
 function AdminPanel({ authData, telegramId }) {
+  const [adminTab, setAdminTab] = useState('home');  // home / management / stats / settings
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -144,7 +145,42 @@ function AdminPanel({ authData, telegramId }) {
 
   return (
     <div className="font-inter bg-background min-h-screen pb-24">
-      {/* Top App Bar */}
+      {adminTab === 'home' && <AdminHome authData={authData} data={data} onNavigate={setAdminTab} />}
+      {adminTab === 'management' && <AdminManagement onNavigate={setAdminTab} />}
+      {adminTab === 'stats' && <AdminStats />}
+      {adminTab === 'settings' && <AdminSettings />}
+      
+      <AdminBottomNav activeTab={adminTab} setActiveTab={setAdminTab} />
+    </div>
+  );
+}
+
+// ============== ADMIN BOTTOM NAV ==============
+function AdminBottomNav({ activeTab, setActiveTab }) {
+  const tabs = [
+    { id: 'home', icon: 'home', label: 'Bosh' },
+    { id: 'management', icon: 'grid_view', label: 'Boshqaruv' },
+    { id: 'stats', icon: 'bar_chart', label: 'Stat' },
+    { id: 'settings', icon: 'settings', label: 'Sozl' },
+  ];
+
+  return (
+    <nav className="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center bg-white/95 backdrop-blur-md px-2 pb-safe border-t border-outline-variant h-16">
+      {tabs.map(t => (
+        <button key={t.id} onClick={() => setActiveTab(t.id)} 
+          className={"flex flex-col items-center active:scale-90 transition-transform " + (activeTab === t.id ? "text-primary font-semibold" : "text-on-surface-variant")}>
+          <span className="material-symbols-outlined" style={activeTab === t.id ? {fontVariationSettings: "'FILL' 1"} : {}}>{t.icon}</span>
+          <span className="text-[10px] font-medium">{t.label}</span>
+        </button>
+      ))}
+    </nav>
+  );
+}
+
+// ============== ADMIN HOME ==============
+function AdminHome({ authData, data, onNavigate }) {
+  return (
+    <>
       <header className="fixed top-0 left-0 w-full z-50 flex items-center justify-between px-4 bg-surface h-14 border-b border-outline-variant">
         <h1 className="text-base font-bold text-primary">🏠 Bosh sahifa</h1>
         <span className="material-symbols-outlined text-on-surface-variant">more_vert</span>
@@ -179,43 +215,34 @@ function AdminPanel({ authData, telegramId }) {
         <section>
           <h3 className="text-base font-bold mb-2 text-on-surface px-1">Bugungi Holat</h3>
           <div className="space-y-2">
-            {/* Pending submissions */}
-            <button className="w-full flex items-center p-4 bg-white border border-outline-variant rounded-2xl shadow-sm active:scale-[0.98] transition-transform">
+            <button onClick={() => onNavigate('management')} className="w-full flex items-center p-4 bg-white border border-outline-variant rounded-2xl shadow-sm active:scale-[0.98] transition-transform">
               <div className="w-10 h-10 rounded-full bg-yellow-100 flex items-center justify-center mr-3 flex-shrink-0">
                 <span className="material-symbols-outlined text-yellow-700">task</span>
               </div>
               <div className="flex-1 text-left">
-                <p className="text-sm font-semibold text-yellow-900">
-                  {data?.pending?.submissions || 0} ta vazifa kutmoqda
-                </p>
+                <p className="text-sm font-semibold text-yellow-900">{data?.pending?.submissions || 0} ta vazifa kutmoqda</p>
                 <p className="text-xs text-outline">Tekshirilishi zarur</p>
               </div>
               <span className="material-symbols-outlined text-outline">chevron_right</span>
             </button>
 
-            {/* Pending users */}
-            <button className="w-full flex items-center p-4 bg-white border border-outline-variant rounded-2xl shadow-sm active:scale-[0.98] transition-transform">
+            <button onClick={() => onNavigate('management')} className="w-full flex items-center p-4 bg-white border border-outline-variant rounded-2xl shadow-sm active:scale-[0.98] transition-transform">
               <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center mr-3 flex-shrink-0">
                 <span className="material-symbols-outlined text-blue-700">list_alt</span>
               </div>
               <div className="flex-1 text-left">
-                <p className="text-sm font-semibold text-blue-900">
-                  {data?.pending?.users || 0} ta yangi ro\'yxat
-                </p>
+                <p className="text-sm font-semibold text-blue-900">{data?.pending?.users || 0} ta yangi ro\'yxat</p>
                 <p className="text-xs text-outline">Guruh shakllantirish</p>
               </div>
               <span className="material-symbols-outlined text-outline">chevron_right</span>
             </button>
 
-            {/* Pending fines */}
-            <button className="w-full flex items-center p-4 bg-white border border-outline-variant rounded-2xl shadow-sm active:scale-[0.98] transition-transform">
+            <button onClick={() => onNavigate('settings')} className="w-full flex items-center p-4 bg-white border border-outline-variant rounded-2xl shadow-sm active:scale-[0.98] transition-transform">
               <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center mr-3 flex-shrink-0">
                 <span className="material-symbols-outlined text-red-700">payments</span>
               </div>
               <div className="flex-1 text-left">
-                <p className="text-sm font-semibold text-red-900">
-                  {data?.pending?.fines || 0} ta jarima to\'lov
-                </p>
+                <p className="text-sm font-semibold text-red-900">{data?.pending?.fines || 0} ta jarima to\'lov</p>
                 <p className="text-xs text-outline">Tasdiqlash kutilmoqda</p>
               </div>
               <span className="material-symbols-outlined text-outline">chevron_right</span>
@@ -227,25 +254,25 @@ function AdminPanel({ authData, telegramId }) {
         <section>
           <h3 className="text-base font-bold mb-2 text-on-surface px-1">Tezkor Harakatlar</h3>
           <div className="grid grid-cols-2 gap-3">
-            <button className="flex flex-col items-center p-4 bg-white border border-outline-variant rounded-2xl shadow-sm active:scale-95 transition-transform">
+            <button onClick={() => onNavigate('settings')} className="flex flex-col items-center p-4 bg-white border border-outline-variant rounded-2xl shadow-sm active:scale-95 transition-transform">
               <div className="w-12 h-12 rounded-xl bg-primary-container/10 flex items-center justify-center mb-2">
                 <span className="material-symbols-outlined text-primary-container">send</span>
               </div>
               <span className="text-xs font-medium text-on-surface">📤 Massa xabar</span>
             </button>
-            <button className="flex flex-col items-center p-4 bg-white border border-outline-variant rounded-2xl shadow-sm active:scale-95 transition-transform">
+            <button onClick={() => onNavigate('management')} className="flex flex-col items-center p-4 bg-white border border-outline-variant rounded-2xl shadow-sm active:scale-95 transition-transform">
               <div className="w-12 h-12 rounded-xl bg-primary-container/10 flex items-center justify-center mb-2">
                 <span className="material-symbols-outlined text-primary-container">featured_seasonal_and_gifts</span>
               </div>
               <span className="text-xs font-medium text-on-surface">🎁 Bonus berish</span>
             </button>
-            <button className="flex flex-col items-center p-4 bg-white border border-outline-variant rounded-2xl shadow-sm active:scale-95 transition-transform">
+            <button onClick={() => onNavigate('settings')} className="flex flex-col items-center p-4 bg-white border border-outline-variant rounded-2xl shadow-sm active:scale-95 transition-transform">
               <div className="w-12 h-12 rounded-xl bg-primary-container/10 flex items-center justify-center mb-2">
                 <span className="material-symbols-outlined text-primary-container">description</span>
               </div>
               <span className="text-xs font-medium text-on-surface">📥 Excel eksport</span>
             </button>
-            <button className="flex flex-col items-center p-4 bg-white border border-outline-variant rounded-2xl shadow-sm active:scale-95 transition-transform">
+            <button onClick={() => onNavigate('settings')} className="flex flex-col items-center p-4 bg-white border border-outline-variant rounded-2xl shadow-sm active:scale-95 transition-transform">
               <div className="w-12 h-12 rounded-xl bg-primary-container/10 flex items-center justify-center mb-2">
                 <span className="material-symbols-outlined text-primary-container">settings</span>
               </div>
@@ -258,13 +285,10 @@ function AdminPanel({ authData, telegramId }) {
         <section>
           <div className="flex justify-between items-center mb-2 px-1">
             <h3 className="text-base font-bold text-on-surface">Oxirgi Harakatlar</h3>
-            <button className="text-xs font-medium text-primary">Hammasi</button>
           </div>
           <div className="bg-surface-container-low rounded-2xl p-2 space-y-1">
             {(!data?.recent_activity || data.recent_activity.length === 0) && (
-              <div className="text-center py-4 text-sm text-on-surface-variant">
-                Hozircha harakatlar yo\'q
-              </div>
+              <div className="text-center py-4 text-sm text-on-surface-variant">Hozircha harakatlar yo\'q</div>
             )}
             {data?.recent_activity?.map((a, i) => {
               const time = a.time ? new Date(a.time).toLocaleTimeString('uz', {hour:'2-digit', minute:'2-digit'}) : '';
@@ -279,15 +303,13 @@ function AdminPanel({ authData, telegramId }) {
               }
               return (
                 <div key={i} className="flex items-center p-3 bg-white rounded-lg">
-                  <div className="w-8 h-8 rounded-full bg-secondary-container flex items-center justify-center mr-3">
+                  <div className="w-8 h-8 rounded-full bg-secondary-container flex items-center justify-center mr-3 flex-shrink-0">
                     <span className="material-symbols-outlined text-on-secondary-container text-[18px]">
                       {a.type === 'new_user' ? 'person_add' : 'check_circle'}
                     </span>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm text-on-surface truncate">
-                      <span className="font-bold text-primary">{time}</span> — {text}
-                    </p>
+                    <p className="text-sm text-on-surface truncate"><span className="font-bold text-primary">{time}</span> — {text}</p>
                   </div>
                 </div>
               );
@@ -295,27 +317,114 @@ function AdminPanel({ authData, telegramId }) {
           </div>
         </section>
       </main>
+    </>
+  );
+}
 
-      {/* Bottom Nav */}
-      <nav className="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center bg-white/95 backdrop-blur-md px-2 pb-safe border-t border-outline-variant h-16">
-        <button className="flex flex-col items-center text-primary">
-          <span className="material-symbols-outlined" style={{fontVariationSettings: "'FILL' 1"}}>home</span>
-          <span className="text-[10px] font-medium">Bosh</span>
-        </button>
-        <button className="flex flex-col items-center text-on-surface-variant">
-          <span className="material-symbols-outlined">grid_view</span>
-          <span className="text-[10px] font-medium">Boshqaruv</span>
-        </button>
-        <button className="flex flex-col items-center text-on-surface-variant">
-          <span className="material-symbols-outlined">bar_chart</span>
-          <span className="text-[10px] font-medium">Stat</span>
-        </button>
-        <button className="flex flex-col items-center text-on-surface-variant">
-          <span className="material-symbols-outlined">settings</span>
-          <span className="text-[10px] font-medium">Sozl</span>
-        </button>
-      </nav>
-    </div>
+// ============== ADMIN MANAGEMENT (Boshqaruv tab) ==============
+function AdminManagement({ onNavigate }) {
+  const items = [
+    { id: 'users', icon: 'pending_actions', emoji: '👤', label: 'Foydalanuvchilar', desc: '46 ta o\'quvchi, 3 guruh, 4 kurator' },
+    { id: 'lessons', icon: 'menu_book', emoji: '📚', label: 'Darslar', desc: '16 dars (4 ochiq, 12 yopiq)' },
+    { id: 'tasks', icon: 'assignment', emoji: '📝', label: 'Vazifalar', desc: 'PENDING vazifalarni tekshirish' },
+    { id: 'projects', icon: 'rocket_launch', emoji: '💼', label: 'Loyihalar', desc: 'O\'quvchilar loyihalari' },
+    { id: 'bonus', icon: 'featured_seasonal_and_gifts', emoji: '🎁', label: 'Bonus ball berish', desc: 'Workshop, Stories, Qo\'shimcha' },
+  ];
+
+  return (
+    <>
+      <header className="fixed top-0 left-0 w-full z-50 flex items-center justify-between px-4 bg-surface h-14 border-b border-outline-variant">
+        <h1 className="text-base font-bold text-primary">📋 Boshqaruv</h1>
+        <span className="material-symbols-outlined text-on-surface-variant">more_vert</span>
+      </header>
+
+      <main className="pt-20 px-4 space-y-4">
+        {/* Hero */}
+        <section className="relative overflow-hidden rounded-2xl bg-primary-container p-5 text-white shadow">
+          <div className="relative z-10">
+            <p className="text-xs uppercase tracking-widest opacity-80">Dashboard</p>
+            <h2 className="text-xl font-bold mt-1">Real Marketing 5.0</h2>
+            <p className="text-sm mt-2 opacity-90">Kurs bo\'limlarini boshqaring</p>
+          </div>
+          <div className="absolute -right-4 -bottom-4 opacity-10">
+            <span className="material-symbols-outlined text-[120px]" style={{fontVariationSettings: "'FILL' 1"}}>groups</span>
+          </div>
+        </section>
+
+        {/* Menu items */}
+        <section className="bg-white border border-outline-variant rounded-2xl divide-y divide-outline-variant overflow-hidden shadow-sm">
+          {items.map(item => (
+            <button key={item.id} onClick={() => alert(item.label + ' sahifasi tez orada qo\'shiladi')} 
+              className="w-full flex items-center justify-between p-4 hover:bg-surface-container-low active:scale-[0.99] transition-all">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-primary-fixed flex items-center justify-center text-2xl">
+                  {item.emoji}
+                </div>
+                <div className="text-left">
+                  <p className="text-sm font-semibold text-on-surface">{item.label}</p>
+                  <p className="text-xs text-on-surface-variant">{item.desc}</p>
+                </div>
+              </div>
+              <span className="material-symbols-outlined text-on-surface-variant">chevron_right</span>
+            </button>
+          ))}
+        </section>
+      </main>
+    </>
+  );
+}
+
+// ============== ADMIN STATS ==============
+function AdminStats() {
+  return (
+    <>
+      <header className="fixed top-0 left-0 w-full z-50 flex items-center justify-between px-4 bg-surface h-14 border-b border-outline-variant">
+        <h1 className="text-base font-bold text-primary">📊 Statistika</h1>
+      </header>
+      <main className="pt-20 px-4">
+        <div className="bg-white rounded-2xl p-6 shadow-sm border border-outline-variant text-center">
+          <span className="material-symbols-outlined text-5xl text-primary mb-2">construction</span>
+          <h3 className="text-lg font-bold text-on-surface mb-2">Statistika sahifasi</h3>
+          <p className="text-sm text-on-surface-variant">Tez orada qo\'shiladi</p>
+        </div>
+      </main>
+    </>
+  );
+}
+
+// ============== ADMIN SETTINGS ==============
+function AdminSettings() {
+  const items = [
+    { emoji: '⚙️', label: 'Sozlamalar', desc: 'Kurs, deadline\'lar, ballar, jarimalar' },
+    { emoji: '📤', label: 'Massa xabar', desc: 'Hammaga yoki guruhga xabar yuborish' },
+    { emoji: '📥', label: 'Excel eksport', desc: 'Ma\'lumotlarni Excel\'ga yuklash' },
+  ];
+
+  return (
+    <>
+      <header className="fixed top-0 left-0 w-full z-50 flex items-center justify-between px-4 bg-surface h-14 border-b border-outline-variant">
+        <h1 className="text-base font-bold text-primary">⚙️ Sozlamalar</h1>
+      </header>
+      <main className="pt-20 px-4 space-y-4">
+        <section className="bg-white border border-outline-variant rounded-2xl divide-y divide-outline-variant overflow-hidden shadow-sm">
+          {items.map((item, i) => (
+            <button key={i} onClick={() => alert(item.label + ' tez orada')} 
+              className="w-full flex items-center justify-between p-4 hover:bg-surface-container-low active:scale-[0.99] transition-all">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-primary-fixed flex items-center justify-center text-2xl">
+                  {item.emoji}
+                </div>
+                <div className="text-left">
+                  <p className="text-sm font-semibold text-on-surface">{item.label}</p>
+                  <p className="text-xs text-on-surface-variant">{item.desc}</p>
+                </div>
+              </div>
+              <span className="material-symbols-outlined text-on-surface-variant">chevron_right</span>
+            </button>
+          ))}
+        </section>
+      </main>
+    </>
   );
 }
 
