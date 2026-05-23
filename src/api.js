@@ -51,6 +51,9 @@ export const studentAPI = {
   async getAdminDashboard() {
     return apiFetch(`/api/admin/dashboard`);
   },
+  async getAdminUsersStats() {
+    return apiFetch(`/api/admin/users/stats`);
+  },
 };
 
 /**

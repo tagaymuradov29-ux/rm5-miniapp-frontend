@@ -113,6 +113,7 @@ export default function App() {
 // ============== ADMIN PANEL (with tab navigation) ==============
 function AdminPanel({ authData, telegramId }) {
   const [adminTab, setAdminTab] = useState('home');  // home / management / stats / settings
+  const [mngSubPage, setMngSubPage] = useState(null); // null / users / lessons / tasks / projects / bonus
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -146,7 +147,8 @@ function AdminPanel({ authData, telegramId }) {
   return (
     <div className="font-inter bg-background min-h-screen pb-24">
       {adminTab === 'home' && <AdminHome authData={authData} data={data} onNavigate={setAdminTab} />}
-      {adminTab === 'management' && <AdminManagement onNavigate={setAdminTab} />}
+      {adminTab === 'management' && !mngSubPage && <AdminManagement onNavigate={setAdminTab} onSubPage={setMngSubPage} />}
+      {adminTab === 'management' && mngSubPage === 'users' && <AdminUsersMenu onBack={() => setMngSubPage(null)} />}
       {adminTab === 'stats' && <AdminStats />}
       {adminTab === 'settings' && <AdminSettings />}
       
@@ -322,7 +324,7 @@ function AdminHome({ authData, data, onNavigate }) {
 }
 
 // ============== ADMIN MANAGEMENT (Boshqaruv tab) ==============
-function AdminManagement({ onNavigate }) {
+function AdminManagement({ onNavigate, onSubPage }) {
   const items = [
     { id: 'users', icon: 'pending_actions', emoji: '👤', label: 'Foydalanuvchilar', desc: '46 ta o\'quvchi, 3 guruh, 4 kurator' },
     { id: 'lessons', icon: 'menu_book', emoji: '📚', label: 'Darslar', desc: '16 dars (4 ochiq, 12 yopiq)' },
@@ -422,6 +424,102 @@ function AdminSettings() {
               <span className="material-symbols-outlined text-on-surface-variant">chevron_right</span>
             </button>
           ))}
+        </section>
+      </main>
+    </>
+  );
+}
+
+// ============== ADMIN USERS MENU (Foydalanuvchilar) ==============
+function AdminUsersMenu({ onBack }) {
+  const [stats, setStats] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    studentAPI.getAdminUsersStats()
+      .then(d => { setStats(d); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, []);
+
+  const items = [
+    { id: 'pending', icon: 'pending_actions', color: 'tertiary-fixed', textColor: 'tertiary', emoji: '⏳', label: 'Kutayotganlar', desc: 'Tasdiqlanishi kutilmoqda', count: stats?.pending },
+    { id: 'approved', icon: 'school', color: 'secondary-container', textColor: 'on-secondary-container', emoji: '✅', label: "Tasdiqlangan o'quvchilar", desc: "Faol o'quvchilar ro'yxati", count: stats?.approved_students },
+    { id: 'groups', icon: 'diversity_3', color: 'primary-fixed-dim', textColor: 'primary', emoji: '👥', label: 'Guruhlar', desc: "O'quv guruhlari boshqaruvi", count: stats?.groups },
+    { id: 'curators', icon: 'person_search', color: 'surface-container-high', textColor: 'on-surface-variant', emoji: '🟢', label: 'Kuratorlar', desc: 'Mas\'ul xodimlar', count: stats?.curators },
+    { id: 'assistants', icon: 'support_agent', color: 'surface-container-high', textColor: 'on-surface-variant', emoji: '🟠', label: 'Asistentlar', desc: 'Yordamchi kuratorlar', count: stats?.assistants },
+    { id: 'blocked', icon: 'block', color: 'surface-container-high', textColor: 'error', emoji: '🚫', label: 'Bloklanganlar', desc: 'Cheklangan foydalanuvchilar', count: stats?.blocked },
+  ];
+
+  return (
+    <>
+      <header className="fixed top-0 left-0 w-full z-50 flex items-center justify-between px-4 bg-surface h-14 border-b border-outline-variant">
+        <div className="flex items-center gap-3">
+          <button onClick={onBack} className="active:scale-95 transition-transform">
+            <span className="material-symbols-outlined text-primary">arrow_back</span>
+          </button>
+          <h1 className="text-base font-bold text-primary">👤 Foydalanuvchilar</h1>
+        </div>
+        <span className="material-symbols-outlined text-on-surface-variant">more_vert</span>
+      </header>
+
+      <main className="pt-20 px-4 space-y-4">
+        {/* Search */}
+        <div className="relative">
+          <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline">search</span>
+          <input className="w-full bg-white border border-outline-variant rounded-xl pl-11 pr-4 py-3 text-sm focus:outline-none focus:border-primary-container" placeholder="Ism yoki username..." />
+        </div>
+
+        {/* Hero */}
+        <section className="relative overflow-hidden rounded-2xl bg-primary-container p-5 text-white shadow">
+          <div className="relative z-10">
+            <p className="text-xs uppercase tracking-widest opacity-80">Boshqaruv</p>
+            <h2 className="text-xl font-bold mt-1">Foydalanuvchilar</h2>
+            <p className="text-sm mt-2 opacity-90">Tizim foydalanuvchilarini boshqarish</p>
+          </div>
+          <div className="absolute -right-4 -bottom-4 opacity-10">
+            <span className="material-symbols-outlined text-[120px]" style={{fontVariationSettings: "'FILL' 1"}}>groups</span>
+          </div>
+        </section>
+
+        {/* Categories */}
+        <section>
+          <h3 className="text-xs font-bold tracking-widest text-outline uppercase px-1 mb-2">TURLAR</h3>
+          <div className="bg-white border border-outline-variant rounded-2xl divide-y divide-outline-variant overflow-hidden shadow-sm">
+            {items.map(item => (
+              <button key={item.id} onClick={() => alert(item.label + ' tez orada qo\'shiladi')}
+                className="w-full flex items-center justify-between p-4 hover:bg-surface-container-low active:scale-[0.99] transition-all">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-primary-fixed flex items-center justify-center text-2xl">
+                    {item.emoji}
+                  </div>
+                  <div className="text-left">
+                    <p className="text-sm font-semibold text-on-surface">{item.label}</p>
+                    <p className="text-xs text-on-surface-variant">{item.desc}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="px-2 py-0.5 rounded-full bg-surface-container-high text-on-surface-variant text-xs font-medium">
+                    {loading ? '...' : (item.count ?? 0)}
+                  </span>
+                  <span className="material-symbols-outlined text-on-surface-variant text-[20px]">chevron_right</span>
+                </div>
+              </button>
+            ))}
+          </div>
+        </section>
+
+        {/* Move to Group */}
+        <section>
+          <button className="w-full flex items-center gap-3 p-4 bg-white border-2 border-dashed border-outline-variant rounded-2xl hover:bg-primary-fixed/30 transition-all active:scale-95">
+            <div className="w-12 h-12 rounded-full bg-primary-container text-white flex items-center justify-center">
+              <span className="material-symbols-outlined">move_up</span>
+            </div>
+            <div className="text-left flex-1">
+              <p className="text-sm font-semibold text-primary">Boshqa guruhga ko\'chirish</p>
+              <p className="text-xs text-outline">Ommaviy ko\'chirish wizard</p>
+            </div>
+            <span className="material-symbols-outlined text-primary">auto_fix_high</span>
+          </button>
         </section>
       </main>
     </>
