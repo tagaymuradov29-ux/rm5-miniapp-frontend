@@ -39,6 +39,9 @@ export const studentAPI = {
   async getRanking(telegramId) {
     return apiFetch(`/api/student/${telegramId}/ranking`);
   },
+  async getLessonDetails(telegramId, lessonId) {
+    return apiFetch(`/api/student/${telegramId}/lesson/${lessonId}`);
+  },
 };
 
 /**

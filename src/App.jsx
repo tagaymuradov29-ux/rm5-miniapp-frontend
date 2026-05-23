@@ -3,6 +3,7 @@ import { studentAPI, getTelegramUser, initTelegramWebApp } from './api';
 
 export default function App() {
   const [user, setUser] = useState(null);
+  const [selectedLessonId, setSelectedLessonId] = useState(null);
   const [profile, setProfile] = useState(null);
   const [scores, setScores] = useState(null);
   const [lessons, setLessons] = useState([]);
@@ -61,10 +62,21 @@ export default function App() {
     );
   }
 
+  // Agar dars tanlangan bolsa - LessonDetail koramiz (toliq ekran)
+  if (selectedLessonId) {
+    return (
+      <LessonDetail 
+        telegramId={user?.id} 
+        lessonId={selectedLessonId} 
+        onBack={() => setSelectedLessonId(null)} 
+      />
+    );
+  }
+
   return (
     <div className="min-h-screen pb-24">
       {activeTab === 'home' && <HomeTab profile={profile} scores={scores} ranking={ranking} />}
-      {activeTab === 'lessons' && <LessonsTab lessons={lessons} />}
+      {activeTab === 'lessons' && <LessonsTab lessons={lessons} onSelectLesson={setSelectedLessonId} />}
       {activeTab === 'ranking' && <RankingTab ranking={ranking} />}
       {activeTab === 'profile' && <ProfileTab profile={profile} user={user} />}
       
@@ -207,8 +219,232 @@ function ScoreBar({ icon, label, earned, max }) {
   );
 }
 
+// ============== LESSON DETAIL (yangi sahifa) ==============
+function LessonDetail({ telegramId, lessonId, onBack }) {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [openAccordion, setOpenAccordion] = useState(null);
+
+  useEffect(() => {
+    let mounted = true;
+    studentAPI.getLessonDetails(telegramId, lessonId)
+      .then(d => { if (mounted) { setData(d); setLoading(false); }})
+      .catch(e => { if (mounted) { setError(e.message); setLoading(false); }});
+    return () => { mounted = false; };
+  }, [telegramId, lessonId]);
+
+  if (loading) {
+    return (
+      <div className="font-inter min-h-screen flex items-center justify-center bg-background">
+        <div className="text-on-surface-variant">⏳ Yuklanmoqda...</div>
+      </div>
+    );
+  }
+
+  if (error || !data) {
+    return (
+      <div className="font-inter min-h-screen p-4 bg-background">
+        <button onClick={onBack} className="text-primary flex items-center gap-2 mb-4">
+          <span className="material-symbols-outlined">arrow_back</span> Orqaga
+        </button>
+        <div className="bg-error-container/20 p-4 rounded-xl text-error text-center">
+          ⚠️ {error || "Ma'lumot yuklanmadi"}
+        </div>
+      </div>
+    );
+  }
+
+  const toggle = (key) => setOpenAccordion(openAccordion === key ? null : key);
+
+  return (
+    <div className="font-inter bg-background min-h-screen pb-24">
+      {/* Top bar */}
+      <header className="sticky top-0 z-40 flex items-center justify-between px-4 h-14 bg-surface shadow-sm">
+        <button onClick={onBack} className="flex items-center gap-2 text-primary active:scale-95 transition-transform">
+          <span className="material-symbols-outlined">arrow_back</span>
+          <span className="font-semibold">Orqaga</span>
+        </button>
+      </header>
+
+      <main className="px-4 pt-4 space-y-4">
+        {/* Lesson Header Card */}
+        <section className="bg-white/80 backdrop-blur rounded-2xl p-4 shadow-sm border border-outline-variant/30">
+          <div className="flex justify-between items-start mb-3">
+            <div>
+              <span className="text-primary text-xs font-bold uppercase tracking-wider">Dars {data.lesson_number}</span>
+              <h2 className="text-xl font-bold text-on-surface mt-1 leading-tight">{data.title}</h2>
+            </div>
+            <div className="flex flex-col items-end gap-1">
+              <div className="bg-primary-container/15 px-3 py-1 rounded-full flex items-center gap-1">
+                <span className="text-xs">💎</span>
+                <span className="text-xs font-bold text-primary">{data.max_total} Max</span>
+              </div>
+              <div className="bg-secondary-container/20 px-3 py-1 rounded-full flex items-center gap-1">
+                <span className="text-xs">💎</span>
+                <span className="text-xs font-bold text-secondary">{data.total_earned} / {data.max_total}</span>
+              </div>
+            </div>
+          </div>
+          
+          {data.speaker && (
+            <div className="flex items-center gap-3 pt-3 border-t border-outline-variant/30">
+              <div className="w-10 h-10 rounded-full bg-primary-fixed flex items-center justify-center text-primary font-bold">
+                {data.speaker.split(' ').map(w => w[0]).slice(0, 2).join('')}
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-on-surface">{data.speaker}</p>
+                <p className="text-xs text-on-surface-variant">Spiker</p>
+              </div>
+            </div>
+          )}
+          
+          {data.lesson_date && (
+            <div className="mt-3 flex items-center gap-2 text-xs text-on-surface-variant">
+              <span className="material-symbols-outlined text-[16px]">calendar_today</span>
+              <span>{new Date(data.lesson_date).toLocaleDateString('uz')}</span>
+            </div>
+          )}
+        </section>
+
+        {/* Tasks Accordion */}
+        <section className="space-y-2">
+          <h3 className="text-sm font-semibold text-on-surface-variant px-1">Vazifalar va topshiriqlar</h3>
+          <div className="space-y-2">
+            <TaskAccordion icon="📒" name="Konspekt" maxScore={10} 
+              data={data.submissions.konspekt} 
+              isOpen={openAccordion === 'konspekt'} 
+              onToggle={() => toggle('konspekt')} />
+            
+            {data.has_workbook && (
+              <TaskAccordion icon="📘" name="Workbook" maxScore={20} 
+                data={data.submissions.workbook}
+                isOpen={openAccordion === 'workbook'} 
+                onToggle={() => toggle('workbook')} />
+            )}
+            
+            {data.has_practical && (
+              <TaskAccordion icon="🛠" name="Amaliy topshiriq" maxScore={50} 
+                data={data.submissions.amaliy}
+                isOpen={openAccordion === 'amaliy'} 
+                onToggle={() => toggle('amaliy')} />
+            )}
+            
+            <TaskAccordion icon="🧪" name="Test" maxScore={20} 
+              data={data.submissions.test ? {status: 'APPROVED', score: data.submissions.test.score} : null}
+              isOpen={openAccordion === 'test'} 
+              onToggle={() => toggle('test')} />
+          </div>
+        </section>
+      </main>
+    </div>
+  );
+}
+
+function TaskAccordion({ icon, name, maxScore, data, isOpen, onToggle }) {
+  let badge = (
+    <span className="bg-surface-container-high text-on-surface-variant px-2 py-0.5 rounded text-xs font-bold">
+      Topshirilmagan
+    </span>
+  );
+  
+  if (data) {
+    if (data.status === 'APPROVED') {
+      badge = (
+        <span className="bg-primary/15 text-primary px-2 py-0.5 rounded text-xs font-bold flex items-center gap-1">
+          <span className="material-symbols-outlined text-[14px]">check_circle</span> Approved
+        </span>
+      );
+    } else if (data.status === 'PENDING') {
+      badge = (
+        <span className="bg-secondary-container/30 text-secondary px-2 py-0.5 rounded text-xs font-bold flex items-center gap-1">
+          <span className="material-symbols-outlined text-[14px]">hourglass_empty</span> Pending
+        </span>
+      );
+    } else if (data.status === 'REJECTED') {
+      badge = (
+        <span className="bg-error-container text-error px-2 py-0.5 rounded text-xs font-bold flex items-center gap-1">
+          <span className="material-symbols-outlined text-[14px]">cancel</span> Rejected
+        </span>
+      );
+    }
+  }
+  
+  return (
+    <div className="bg-white rounded-xl border border-outline-variant/30 overflow-hidden">
+      <button onClick={onToggle} className="w-full flex items-center justify-between p-4 text-left active:bg-surface-container-low transition-colors">
+        <div className="flex items-center gap-3">
+          <span className="text-2xl">{icon}</span>
+          <div>
+            <p className="font-semibold text-on-surface">{name}</p>
+            <p className="text-xs text-primary font-bold">
+              {data && data.status === 'APPROVED' ? (data.score || 0) + ' / ' + maxScore + ' ball' : maxScore + ' ball'}
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          {badge}
+          <span className={'material-symbols-outlined text-on-surface-variant transition-transform ' + (isOpen ? 'rotate-180' : '')}>expand_more</span>
+        </div>
+      </button>
+      
+      {isOpen && (
+        <div className="bg-surface-container-low/30 border-t border-outline-variant/30 p-4 space-y-3">
+          {!data && (
+            <p className="text-sm text-on-surface-variant text-center py-2">Hali topshirilmagan</p>
+          )}
+          
+          {data && data.status === 'APPROVED' && (
+            <>
+              {data.reviewer_name && (
+                <div className="flex items-center justify-between text-xs text-on-surface-variant">
+                  <span>Kurator: <b className="text-on-surface">{data.reviewer_name}</b></span>
+                  {data.reviewed_at && <span>{new Date(data.reviewed_at).toLocaleDateString('uz')}</span>}
+                </div>
+              )}
+              {data.feedback && (
+                <div className="bg-white p-3 rounded-lg text-sm italic text-on-surface-variant border border-outline-variant/30">
+                  "{data.feedback}"
+                </div>
+              )}
+              {data.is_late && (
+                <div className="text-xs text-secondary font-semibold">⏰ Kechikkan</div>
+              )}
+            </>
+          )}
+          
+          {data && data.status === 'PENDING' && (
+            <>
+              <p className="text-sm text-on-surface-variant">Vazifa kurator tomonidan tekshirilmoqda.</p>
+              {data.submitted_at && (
+                <p className="text-xs text-on-surface-variant">
+                  Yuborilgan: {new Date(data.submitted_at).toLocaleDateString('uz')}
+                </p>
+              )}
+            </>
+          )}
+          
+          {data && data.status === 'REJECTED' && (
+            <>
+              {data.feedback && (
+                <div className="bg-error-container/10 p-3 border-l-4 border-error rounded-r-lg">
+                  <p className="text-xs font-bold text-error uppercase mb-1">Kurator izohi:</p>
+                  <p className="text-sm text-on-surface-variant">"{data.feedback}"</p>
+                </div>
+              )}
+              <p className="text-xs text-on-surface-variant text-center pt-2">
+                Botda qaytadan yuborishingiz mumkin
+              </p>
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ============== LESSONS TAB ==============
-function LessonsTab({ lessons }) {
+function LessonsTab({ lessons, onSelectLesson }) {
   const [filter, setFilter] = useState('all');
   
   const filtered = lessons.filter(l => {
@@ -239,7 +475,7 @@ function LessonsTab({ lessons }) {
             <p className="mt-2 text-sm">Bu kategoriyada darslar yo'q</p>
           </div>
         ) : (
-          filtered.map(lesson => <LessonCard key={lesson.lesson_id} lesson={lesson} />)
+          filtered.map(lesson => <LessonCard key={lesson.lesson_id} lesson={lesson} onClick={() => onSelectLesson && onSelectLesson(lesson.lesson_id)} />)
         )}
       </div>
     </div>
@@ -265,7 +501,7 @@ function isLessonLate(l) {
   return [l.konspekt, l.workbook, l.amaliy, l.test].some(x => x && x.status === 'REJECTED');
 }
 
-function LessonCard({ lesson }) {
+function LessonCard({ lesson, onClick }) {
   if (!lesson.is_unlocked) {
     return (
       <article className="bg-surface-container-low rounded-2xl p-4 border border-dashed border-outline-variant/50 relative overflow-hidden">
@@ -291,7 +527,7 @@ function LessonCard({ lesson }) {
   }
 
   return (
-    <article className="bg-white rounded-2xl p-4 shadow-sm border border-outline-variant/30">
+    <article onClick={onClick} className="bg-white rounded-2xl p-4 shadow-sm border border-outline-variant/30 active:scale-[0.98] transition-transform cursor-pointer">
       <div className="flex justify-between items-start mb-2">
         <span className="px-2 py-1 bg-primary-container/20 text-primary text-xs font-semibold rounded-lg">{lesson.lesson_number}-dars</span>
         <div className="flex items-center gap-1 text-on-surface-variant">
