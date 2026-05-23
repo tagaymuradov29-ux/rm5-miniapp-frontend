@@ -54,6 +54,9 @@ export const studentAPI = {
   async getAdminUsersStats() {
     return apiFetch(`/api/admin/users/stats`);
   },
+  async getAdminStudents() {
+    return apiFetch(`/api/admin/students`);
+  },
 };
 
 /**

@@ -114,6 +114,7 @@ export default function App() {
 function AdminPanel({ authData, telegramId }) {
   const [adminTab, setAdminTab] = useState('home');  // home / management / stats / settings
   const [mngSubPage, setMngSubPage] = useState(null); // null / users / lessons / tasks / projects / bonus
+  const [usersSubPage, setUsersSubPage] = useState(null); // null / approved / pending / groups / curators / assistants / blocked
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -148,7 +149,8 @@ function AdminPanel({ authData, telegramId }) {
     <div className="font-inter bg-background min-h-screen pb-24">
       {adminTab === 'home' && <AdminHome authData={authData} data={data} onNavigate={setAdminTab} />}
       {adminTab === 'management' && !mngSubPage && <AdminManagement onNavigate={setAdminTab} onSubPage={setMngSubPage} />}
-      {adminTab === 'management' && mngSubPage === 'users' && <AdminUsersMenu onBack={() => setMngSubPage(null)} />}
+      {adminTab === 'management' && mngSubPage === 'users' && !usersSubPage && <AdminUsersMenu onBack={() => setMngSubPage(null)} onSubPage={setUsersSubPage} />}
+      {adminTab === 'management' && mngSubPage === 'users' && usersSubPage === 'approved' && <AdminStudentsList onBack={() => setUsersSubPage(null)} />}
       {adminTab === 'stats' && <AdminStats />}
       {adminTab === 'settings' && <AdminSettings />}
       
@@ -431,7 +433,7 @@ function AdminSettings() {
 }
 
 // ============== ADMIN USERS MENU (Foydalanuvchilar) ==============
-function AdminUsersMenu({ onBack }) {
+function AdminUsersMenu({ onBack, onSubPage }) {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -486,7 +488,7 @@ function AdminUsersMenu({ onBack }) {
           <h3 className="text-xs font-bold tracking-widest text-outline uppercase px-1 mb-2">TURLAR</h3>
           <div className="bg-white border border-outline-variant rounded-2xl divide-y divide-outline-variant overflow-hidden shadow-sm">
             {items.map(item => (
-              <button key={item.id} onClick={() => alert(item.label + ' tez orada qo\'shiladi')}
+              <button key={item.id} onClick={() => item.id === 'approved' ? onSubPage('approved') : alert(item.label + ' tez orada qoshiladi')}
                 className="w-full flex items-center justify-between p-4 hover:bg-surface-container-low active:scale-[0.99] transition-all">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-lg bg-primary-fixed flex items-center justify-center text-2xl">
@@ -523,6 +525,141 @@ function AdminUsersMenu({ onBack }) {
         </section>
       </main>
     </>
+  );
+}
+
+// ============== ADMIN STUDENTS LIST (46 ta o'quvchi) ==============
+function AdminStudentsList({ onBack }) {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+  const [sortBy, setSortBy] = useState('name'); // name / score
+  const [filterGroup, setFilterGroup] = useState('all');
+
+  useEffect(() => {
+    studentAPI.getAdminStudents()
+      .then(d => { setData(d); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="font-inter bg-background min-h-screen flex items-center justify-center">
+        <div className="text-on-surface-variant">⏳ Yuklanmoqda...</div>
+      </div>
+    );
+  }
+
+  let students = data?.students || [];
+  
+  // Search
+  if (search) {
+    const s = search.toLowerCase();
+    students = students.filter(st => 
+      st.full_name?.toLowerCase().includes(s) || 
+      st.username?.toLowerCase().includes(s)
+    );
+  }
+  
+  // Filter by group
+  if (filterGroup !== 'all') {
+    students = students.filter(st => st.group_id === parseInt(filterGroup));
+  }
+  
+  // Sort
+  if (sortBy === 'name') {
+    students = [...students].sort((a, b) => a.full_name.localeCompare(b.full_name));
+  } else if (sortBy === 'score') {
+    students = [...students].sort((a, b) => b.total_score - a.total_score);
+  }
+
+  const groups = [
+    { id: 'all', label: 'Hammasi' },
+    { id: '1', label: '1-guruh' },
+    { id: '2', label: '2-guruh' },
+    { id: '3', label: '3-guruh' },
+  ];
+
+  return (
+    <div className="font-inter bg-background min-h-screen pb-24">
+      <header className="fixed top-0 left-0 w-full z-50 flex items-center justify-between px-4 bg-surface h-14 border-b border-outline-variant">
+        <div className="flex items-center gap-3">
+          <button onClick={onBack} className="active:scale-95">
+            <span className="material-symbols-outlined text-primary">arrow_back</span>
+          </button>
+          <h1 className="text-base font-bold text-primary">✅ O'quvchilar ({students.length})</h1>
+        </div>
+      </header>
+
+      <main className="pt-20 px-4 space-y-3">
+        {/* Search */}
+        <div className="relative">
+          <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline">search</span>
+          <input value={search} onChange={(e) => setSearch(e.target.value)}
+            className="w-full bg-white border border-outline-variant rounded-xl pl-11 pr-4 py-3 text-sm focus:outline-none focus:border-primary-container" 
+            placeholder="Qidirish..." />
+        </div>
+
+        {/* Sort */}
+        <div className="flex gap-2">
+          <button onClick={() => setSortBy('name')} 
+            className={"px-3 py-1.5 rounded-full text-xs font-semibold " + (sortBy === 'name' ? "bg-primary text-white" : "bg-surface-container-high text-on-surface-variant")}>
+            Ism A-Z
+          </button>
+          <button onClick={() => setSortBy('score')} 
+            className={"px-3 py-1.5 rounded-full text-xs font-semibold " + (sortBy === 'score' ? "bg-primary text-white" : "bg-surface-container-high text-on-surface-variant")}>
+            💎 Ball ↓
+          </button>
+        </div>
+
+        {/* Filter */}
+        <div className="flex gap-2 overflow-x-auto pb-1">
+          {groups.map(g => (
+            <button key={g.id} onClick={() => setFilterGroup(g.id)}
+              className={"px-3 py-1.5 rounded-full text-xs whitespace-nowrap " + (filterGroup === g.id ? "bg-primary text-white font-semibold" : "bg-white border border-outline-variant text-on-surface-variant")}>
+              {g.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Students */}
+        <div className="space-y-2">
+          {students.length === 0 ? (
+            <div className="text-center py-8 text-on-surface-variant">
+              <span className="material-symbols-outlined text-4xl">person_off</span>
+              <p className="mt-2 text-sm">Hech narsa topilmadi</p>
+            </div>
+          ) : (
+            students.map(st => {
+              const initials = st.full_name?.split(' ').map(n => n[0]).slice(0,2).join('').toUpperCase() || '??';
+              const medal = st.rank === 1 ? '🥇' : st.rank === 2 ? '🥈' : st.rank === 3 ? '🥉' : null;
+              return (
+                <button key={st.id} onClick={() => alert(st.full_name + ' tafsilotlari tez orada')}
+                  className="w-full bg-white rounded-2xl p-3 shadow-sm border border-outline-variant flex items-center gap-3 active:scale-[0.98] transition-transform">
+                  <div className="w-12 h-12 rounded-full bg-primary-fixed flex items-center justify-center text-primary font-bold flex-shrink-0">
+                    {medal || initials}
+                  </div>
+                  <div className="flex-1 min-w-0 text-left">
+                    <div className="flex items-center gap-2">
+                      <p className="font-semibold text-on-surface text-sm truncate">{st.full_name}</p>
+                    </div>
+                    <p className="text-xs text-on-surface-variant truncate">
+                      {st.username ? '@' + st.username : ''} {st.group_name ? '· ' + st.group_name : ''}
+                    </p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-xs font-bold text-primary">💎 {st.total_score}</span>
+                      <span className="text-xs text-outline">·</span>
+                      <span className="text-xs text-outline">🏆 {st.rank}/{data?.students?.length || 0}</span>
+                    </div>
+                  </div>
+                  <span className="material-symbols-outlined text-on-surface-variant">chevron_right</span>
+                </button>
+              );
+            })
+          )}
+        </div>
+      </main>
+    </div>
   );
 }
 
