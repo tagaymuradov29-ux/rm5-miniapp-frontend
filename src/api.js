@@ -45,6 +45,9 @@ export const studentAPI = {
   async getDashboard(telegramId) {
     return apiFetch(`/api/student/${telegramId}/dashboard`);
   },
+  async getAuthMe(telegramId) {
+    return apiFetch(`/api/auth/me?telegram_id=${telegramId}`);
+  },
 };
 
 /**

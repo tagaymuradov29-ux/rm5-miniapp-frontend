@@ -3,6 +3,7 @@ import { studentAPI, getTelegramUser, initTelegramWebApp } from './api';
 
 export default function App() {
   const [user, setUser] = useState(null);
+  const [authData, setAuthData] = useState(null);
   const [selectedLessonId, setSelectedLessonId] = useState(null);
   const [dashboard, setDashboard] = useState(null);
   const [profile, setProfile] = useState(null);
@@ -25,19 +26,27 @@ export default function App() {
       if (!tgUser || tgUser._error) throw new Error("Telegram foydalanuvchi topilmadi. Debug: " + (tgUser?._debug || "null"));
       setUser(tgUser);
 
-      const [profileData, scoresData, lessonsData, rankingData, dashboardData] = await Promise.all([
-        studentAPI.getProfile(tgUser.id),
-        studentAPI.getScores(tgUser.id),
-        studentAPI.getLessons(tgUser.id),
-        studentAPI.getRanking(tgUser.id),
-        studentAPI.getDashboard(tgUser.id).catch(() => null),
-      ]);
+      // 1. Avval auth - role tekshiramiz
+      const auth = await studentAPI.getAuthMe(tgUser.id);
+      setAuthData(auth);
 
-      setProfile(profileData);
-      setScores(scoresData);
-      setLessons(lessonsData.lessons || []);
-      setRanking(rankingData);
-      setDashboard(dashboardData);
+      // 2. Faqat STUDENT uchun student datalarni yuklaymiz
+      if (auth.role === "STUDENT") {
+        const [profileData, scoresData, lessonsData, rankingData, dashboardData] = await Promise.all([
+          studentAPI.getProfile(tgUser.id),
+          studentAPI.getScores(tgUser.id),
+          studentAPI.getLessons(tgUser.id),
+          studentAPI.getRanking(tgUser.id),
+          studentAPI.getDashboard(tgUser.id).catch(() => null),
+        ]);
+
+        setProfile(profileData);
+        setScores(scoresData);
+        setLessons(lessonsData.lessons || []);
+        setRanking(rankingData);
+        setDashboard(dashboardData);
+      }
+      // ADMIN/ASSISTANT/CURATOR uchun student data kerak emas
     } catch (err) {
       setError(err.message);
     } finally {
@@ -65,6 +74,19 @@ export default function App() {
     );
   }
 
+  // ============ ROLE ROUTING ============
+  // ADMIN va ASSISTANT - Admin Panel koradi
+  if (authData?.role === "ADMIN" || authData?.role === "ASSISTANT") {
+    return <AdminPanel authData={authData} telegramId={user?.id} />;
+  }
+
+  // CURATOR - Tez orada sahifa
+  if (authData?.role === "CURATOR") {
+    return <CuratorComingSoon authData={authData} />;
+  }
+
+  // STUDENT - mavjud UI (quyida)
+
   // Agar dars tanlangan bolsa - LessonDetail koramiz (toliq ekran)
   if (selectedLessonId) {
     return (
@@ -84,6 +106,100 @@ export default function App() {
       {activeTab === 'profile' && <ProfileTab profile={profile} user={user} />}
       
       <BottomNav activeTab={activeTab} setActiveTab={setActiveTab} />
+    </div>
+  );
+}
+
+// ============== ADMIN PANEL (placeholder) ==============
+function AdminPanel({ authData, telegramId }) {
+  return (
+    <div className="font-inter bg-background min-h-screen pb-24">
+      {/* Top App Bar */}
+      <header className="fixed top-0 left-0 w-full z-50 flex items-center justify-between px-4 bg-surface h-14 border-b border-outline-variant">
+        <div className="flex items-center gap-3">
+          <h1 className="text-base font-bold text-primary">🏠 Bosh sahifa</h1>
+        </div>
+        <span className="material-symbols-outlined text-on-surface-variant">more_vert</span>
+      </header>
+
+      <main className="pt-20 px-4 space-y-4">
+        {/* Hero Card */}
+        <section className="relative overflow-hidden rounded-2xl p-5 text-white shadow-lg" 
+          style={{background: 'linear-gradient(135deg, #003b2c 0%, #005440 100%)'}}>
+          <div className="absolute -right-10 -bottom-10 w-40 h-40 bg-primary-container rounded-full opacity-20 blur-2xl"></div>
+          <div className="relative z-10">
+            <p className="text-xs opacity-80 mb-1">Real Marketing 5.0 boshqaruv</p>
+            <h2 className="text-xl font-bold mb-4">👋 Salom, {authData?.full_name}!</h2>
+            <div className="grid grid-cols-3 gap-3">
+              <div className="bg-white/10 backdrop-blur-sm rounded-lg p-2 text-center">
+                <p className="text-[10px] opacity-80">O'quvchilar</p>
+                <p className="text-lg font-bold">46</p>
+              </div>
+              <div className="bg-white/10 backdrop-blur-sm rounded-lg p-2 text-center">
+                <p className="text-[10px] opacity-80">Guruhlar</p>
+                <p className="text-lg font-bold">3</p>
+              </div>
+              <div className="bg-white/10 backdrop-blur-sm rounded-lg p-2 text-center">
+                <p className="text-[10px] opacity-80">Darslar</p>
+                <p className="text-lg font-bold">16/16</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Placeholder */}
+        <section className="bg-white rounded-2xl p-6 shadow-sm border border-outline-variant text-center">
+          <span className="material-symbols-outlined text-5xl text-primary mb-2">construction</span>
+          <h3 className="text-lg font-bold text-on-surface mb-2">Admin Panel qurilmoqda</h3>
+          <p className="text-sm text-on-surface-variant mb-4">
+            Tez orada barcha funksiyalar qo'shiladi.
+          </p>
+          <div className="bg-primary/5 rounded-xl p-3 text-left">
+            <p className="text-xs text-on-surface-variant mb-1">Sizning rolingiz:</p>
+            <p className="text-sm font-bold text-primary">{authData?.role}</p>
+            <p className="text-xs text-on-surface-variant mt-2 mb-1">Telegram ID:</p>
+            <p className="text-sm font-mono text-on-surface">{telegramId}</p>
+          </div>
+        </section>
+      </main>
+
+      {/* Bottom Nav */}
+      <nav className="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center bg-white/95 backdrop-blur-md px-2 pb-safe border-t border-outline-variant h-16">
+        <button className="flex flex-col items-center text-primary">
+          <span className="material-symbols-outlined" style={{fontVariationSettings: "'FILL' 1"}}>home</span>
+          <span className="text-[10px] font-medium">Bosh</span>
+        </button>
+        <button className="flex flex-col items-center text-on-surface-variant">
+          <span className="material-symbols-outlined">grid_view</span>
+          <span className="text-[10px] font-medium">Boshqaruv</span>
+        </button>
+        <button className="flex flex-col items-center text-on-surface-variant">
+          <span className="material-symbols-outlined">bar_chart</span>
+          <span className="text-[10px] font-medium">Stat</span>
+        </button>
+        <button className="flex flex-col items-center text-on-surface-variant">
+          <span className="material-symbols-outlined">settings</span>
+          <span className="text-[10px] font-medium">Sozl</span>
+        </button>
+      </nav>
+    </div>
+  );
+}
+
+// ============== CURATOR COMING SOON ==============
+function CuratorComingSoon({ authData }) {
+  return (
+    <div className="font-inter bg-background min-h-screen flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl p-8 shadow-sm border border-outline-variant max-w-sm text-center">
+        <span className="material-symbols-outlined text-6xl text-primary mb-3">construction</span>
+        <h2 className="text-xl font-bold text-on-surface mb-2">Kurator paneli qurilmoqda</h2>
+        <p className="text-sm text-on-surface-variant mb-4">
+          Hurmatli {authData?.full_name}, Sizning paneliningiz tez orada tayyor bo'ladi.
+        </p>
+        <p className="text-xs text-on-surface-variant">
+          Hozircha botdagi kurator menyu orqali ishlashda davom eting.
+        </p>
+      </div>
     </div>
   );
 }
