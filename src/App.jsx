@@ -20,7 +20,7 @@ export default function App() {
     try {
       setLoading(true);
       const tgUser = getTelegramUser();
-      if (!tgUser) throw new Error('Telegram foydalanuvchi topilmadi');
+      if (!tgUser || tgUser._error) throw new Error("Telegram foydalanuvchi topilmadi. Debug: " + (tgUser?._debug || "null"));
       setUser(tgUser);
 
       const [profileData, scoresData, lessonsData, rankingData] = await Promise.all([

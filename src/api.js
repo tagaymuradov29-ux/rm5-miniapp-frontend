@@ -43,7 +43,7 @@ export const studentAPI = {
 
 /**
  * Telegram WebApp dan HAQIQIY foydalanuvchini olish
- * Test rejimi olib tashlandi!
+ * Debug ma'lumot bilan
  */
 export function getTelegramUser() {
   if (typeof window === 'undefined') return null;
@@ -51,17 +51,25 @@ export function getTelegramUser() {
   const tg = window.Telegram?.WebApp;
   
   if (!tg) {
-    // Brauzer'da to'g'ridan-to'g'ri ochish - ruxsat berilmaydi
-    console.error('❌ Telegram WebApp yo\'q');
-    return null;
+    console.error('Telegram WebApp yoq');
+    return { _error: true, _debug: 'window.Telegram.WebApp = undefined. Brauzerdan ochilgan boladi.' };
   }
 
-  // Real Telegram'dan kelgan ma'lumot
   const user = tg.initDataUnsafe?.user;
   
   if (!user || !user.id) {
-    console.error('❌ Telegram user ma\'lumotlari yo\'q');
-    return null;
+    const debugInfo = {
+      hasInitData: !!tg.initData,
+      initDataLength: tg.initData ? tg.initData.length : 0,
+      initDataUnsafe: tg.initDataUnsafe || 'null',
+      version: tg.version,
+      platform: tg.platform
+    };
+    console.error('Telegram user yoq:', debugInfo);
+    return { 
+      _error: true, 
+      _debug: JSON.stringify(debugInfo, null, 2)
+    };
   }
   
   return user;
