@@ -79,6 +79,9 @@ export const studentAPI = {
     const s = sort ? `&sort=${sort}` : "";
     return apiFetch(`/api/admin/submissions/pending?task_type=${taskType || "all"}${gid}${s}`);
   },
+  async getAdminStatsOverview() {
+    return apiFetch(`/api/admin/stats/overview`);
+  },
   async getAdminLessons() {
     return apiFetch(`/api/admin/lessons`);
   },
