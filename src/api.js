@@ -67,6 +67,10 @@ export const studentAPI = {
     const gid = groupId ? `&group_id=${groupId}` : "";
     return apiFetch(`/api/admin/trend?task_type=${taskType || "all"}${gid}`);
   },
+  async getAdminTrendDrilldown(lessonNumber, taskType, drilldownType, groupId) {
+    const gid = groupId ? `&group_id=${groupId}` : "";
+    return apiFetch(`/api/admin/trend/drilldown?lesson_number=${lessonNumber}&task_type=${taskType || "all"}&drilldown_type=${drilldownType}${gid}`);
+  },
 };
 
 /**
