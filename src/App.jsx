@@ -118,6 +118,7 @@ function AdminPanel({ authData, telegramId }) {
   const [selectedStudentId, setSelectedStudentId] = useState(null);
   const [selectedGroupId, setSelectedGroupId] = useState(null);
   const [showCourseTrend, setShowCourseTrend] = useState(false);
+  const [drilldown, setDrilldown] = useState(null); // {type, lessonNumber, taskType, groupId}
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -156,8 +157,10 @@ function AdminPanel({ authData, telegramId }) {
       {adminTab === 'management' && mngSubPage === 'users' && usersSubPage === 'approved' && !selectedStudentId && <AdminStudentsList onBack={() => setUsersSubPage(null)} onSelectStudent={setSelectedStudentId} />}
       {adminTab === 'management' && mngSubPage === 'users' && usersSubPage === 'approved' && selectedStudentId && <AdminStudentDetail userId={selectedStudentId} onBack={() => setSelectedStudentId(null)} />}
       {adminTab === 'management' && mngSubPage === 'users' && usersSubPage === 'groups' && !selectedGroupId && !showCourseTrend && <AdminGroupsList onBack={() => setUsersSubPage(null)} onSelectGroup={setSelectedGroupId} onShowCourseTrend={() => setShowCourseTrend(true)} />}
-      {adminTab === 'management' && mngSubPage === 'users' && usersSubPage === 'groups' && selectedGroupId && <AdminGroupTrend groupId={selectedGroupId} onBack={() => setSelectedGroupId(null)} />}
-      {adminTab === 'management' && mngSubPage === 'users' && usersSubPage === 'groups' && showCourseTrend && <AdminCourseTrend onBack={() => setShowCourseTrend(false)} />}
+
+      {adminTab === 'management' && mngSubPage === 'users' && usersSubPage === 'groups' && showCourseTrend && !drilldown && <AdminCourseTrend onBack={() => setShowCourseTrend(false)} onDrilldown={(d) => setDrilldown(d)} />}
+      {adminTab === 'management' && mngSubPage === 'users' && usersSubPage === 'groups' && selectedGroupId && !drilldown && <AdminGroupTrend groupId={selectedGroupId} onBack={() => setSelectedGroupId(null)} onDrilldown={(d) => setDrilldown(d)} />}
+      {drilldown && <DrilldownPage drilldown={drilldown} onBack={() => setDrilldown(null)} />}
       {adminTab === 'stats' && <AdminStats />}
       {adminTab === 'settings' && <AdminSettings />}
       
@@ -1045,39 +1048,39 @@ function TaskFilter({ value, onChange }) {
 }
 
 // === INSIGHTS BENTO ===
-function InsightsBento({ insights }) {
+function InsightsBento({ insights, onDrilldown, taskType, groupId }) {
   return (
     <section className="grid grid-cols-2 gap-2">
-      <div className="bg-primary/5 border border-primary/10 p-4 rounded-2xl">
+      <button onClick={() => insights?.best_lesson && onDrilldown && onDrilldown({type: "best", lessonNumber: insights.best_lesson.lesson_number, taskType, groupId})} className="bg-primary/5 border border-primary/10 p-4 rounded-2xl text-left active:scale-95 transition-transform">
         <p className="text-[10px] font-bold text-primary tracking-widest">ENG YAXSHI</p>
         <h4 className="text-lg font-bold text-primary mt-1">{insights?.best_lesson ? insights.best_lesson.lesson_number + "-dars" : "-"}</h4>
         <p className="text-xs font-semibold text-primary mt-2">{insights?.best_lesson?.avg_score?.toFixed(1) || "0"} avg</p>
-      </div>
-      <div className="bg-error/5 border border-error/10 p-4 rounded-2xl">
+      </button>
+      <button onClick={() => insights?.worst_lesson && onDrilldown && onDrilldown({type: "worst", lessonNumber: insights.worst_lesson.lesson_number, taskType, groupId})} className="bg-error/5 border border-error/10 p-4 rounded-2xl text-left active:scale-95 transition-transform">
         <p className="text-[10px] font-bold text-error tracking-widest">ENG ZAIF</p>
         <h4 className="text-lg font-bold text-error mt-1">{insights?.worst_lesson ? insights.worst_lesson.lesson_number + "-dars" : "-"}</h4>
         <p className="text-xs font-semibold text-error mt-2">{insights?.worst_lesson?.avg_score?.toFixed(1) || "0"} avg</p>
-      </div>
-      <div className="bg-white border border-outline-variant p-4 rounded-2xl">
+      </button>
+      <button onClick={() => insights?.biggest_rise && onDrilldown && onDrilldown({type: "rise", lessonNumber: insights.biggest_rise.to, taskType, groupId})} className="bg-white border border-outline-variant p-4 rounded-2xl text-left active:scale-95 transition-transform">
         <p className="text-[10px] font-bold text-on-surface-variant tracking-widest">KOTARILISH</p>
         <div className="flex items-baseline gap-2 mt-1">
           <h4 className="text-base font-bold">{insights?.biggest_rise ? insights.biggest_rise.from + " -> " + insights.biggest_rise.to : "-"}</h4>
           {insights?.biggest_rise && <span className="text-primary font-bold text-sm">+{insights.biggest_rise.percent}%</span>}
         </div>
-      </div>
-      <div className="bg-white border border-outline-variant p-4 rounded-2xl">
+      </button>
+      <button onClick={() => insights?.biggest_drop && onDrilldown && onDrilldown({type: "drop", lessonNumber: insights.biggest_drop.to, taskType, groupId})} className="bg-white border border-outline-variant p-4 rounded-2xl text-left active:scale-95 transition-transform">
         <p className="text-[10px] font-bold text-on-surface-variant tracking-widest">TUSHISH</p>
         <div className="flex items-baseline gap-2 mt-1">
           <h4 className="text-base font-bold">{insights?.biggest_drop ? insights.biggest_drop.from + " -> " + insights.biggest_drop.to : "-"}</h4>
           {insights?.biggest_drop && <span className="text-error font-bold text-sm">{insights.biggest_drop.percent}%</span>}
         </div>
-      </div>
+      </button>
     </section>
   );
 }
 
 // === COURSE TREND ===
-function AdminCourseTrend({ onBack }) {
+function AdminCourseTrend({ onBack, onDrilldown }) {
   const [taskType, setTaskType] = useState("all");
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -1115,7 +1118,7 @@ function AdminCourseTrend({ onBack }) {
           {loading ? <div className="h-[200px] flex items-center justify-center text-on-surface-variant">Yuklanmoqda...</div> :
             <div className="h-[200px]"><TrendChart lessons={data?.lessons || []} /></div>}
         </section>
-        {!loading && data?.insights && <InsightsBento insights={data.insights} />}
+        {!loading && data?.insights && <InsightsBento insights={data.insights} onDrilldown={onDrilldown} taskType={taskType} groupId={null} />}
 
         {/* Stats Bento - Course only */}
         {!loading && data && (
@@ -1162,7 +1165,7 @@ function AdminCourseTrend({ onBack }) {
 }
 
 // === GROUP TREND ===
-function AdminGroupTrend({ groupId, onBack }) {
+function AdminGroupTrend({ groupId, onBack, onDrilldown }) {
   const [taskType, setTaskType] = useState("all");
   const [data, setData] = useState(null);
   const [groupInfo, setGroupInfo] = useState(null);
@@ -1223,7 +1226,7 @@ function AdminGroupTrend({ groupId, onBack }) {
           {loading ? <div className="h-[200px] flex items-center justify-center text-on-surface-variant">Yuklanmoqda...</div> :
             <div className="h-[200px]"><TrendChart lessons={data?.lessons || []} /></div>}
         </section>
-        {!loading && data?.insights && <InsightsBento insights={data.insights} />}
+        {!loading && data?.insights && <InsightsBento insights={data.insights} onDrilldown={onDrilldown} taskType={taskType} groupId={groupId} />}
 
         {/* Problem students */}
         {!loading && data?.problem_count > 0 && (
@@ -1262,6 +1265,174 @@ function AdminGroupTrend({ groupId, onBack }) {
           </section>
         )}
       </main>
+    </div>
+  );
+}
+
+
+// === DRILLDOWN PAGE (4 turi: best/worst/rise/drop) ===
+function DrilldownPage({ drilldown, onBack }) {
+  const { type, lessonNumber, taskType, groupId } = drilldown;
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState("all");
+
+  useEffect(() => {
+    setLoading(true);
+    studentAPI.getAdminTrendDrilldown(lessonNumber, taskType, type, groupId)
+      .then(d => { setData(d); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, [lessonNumber, taskType, type, groupId]);
+
+  if (loading) return <div className="font-inter bg-background min-h-screen flex items-center justify-center"><div>Yuklanmoqda...</div></div>;
+  if (!data) return <div className="font-inter bg-background min-h-screen flex items-center justify-center"><div>Malumot yoq</div></div>;
+
+  const isWorst = type === "worst";
+  const isBest = type === "best";
+  const isRise = type === "rise";
+  const isDrop = type === "drop";
+
+  const titlePrefix = isWorst ? "Eng zaif" : isBest ? "Eng yaxshi" : isRise ? "Kotarilish" : "Tushish";
+  const emoji = isWorst ? "WARN" : isBest ? "TOP" : isRise ? "RISE" : "DROP";
+  const heroBg = isWorst || isDrop ? "bg-error-container/20 border border-error/20" : "bg-primary/5 border border-primary/10";
+  const heroIcon = isWorst ? "warning" : isBest ? "rocket_launch" : isRise ? "trending_up" : "trending_down";
+  const heroIconBg = isWorst || isDrop ? "bg-error/10 text-error" : "bg-primary-container text-on-primary-container";
+
+  // Tabni filterlash
+  const filteredStudents = (data.students || []).filter(s => {
+    if (activeTab === "all") return true;
+    return s.category === activeTab;
+  });
+
+  // Stats labels
+  const taskLabel = taskType === "all" ? "Hammasi" : taskType.charAt(0).toUpperCase() + taskType.slice(1);
+
+  return (
+    <div className="font-inter bg-background min-h-screen pb-40">
+      <header className="fixed top-0 left-0 w-full z-50 flex items-center justify-between px-4 bg-surface h-14 border-b border-outline-variant">
+        <div className="flex items-center gap-3 flex-1 min-w-0">
+          <button onClick={onBack} className="active:scale-95">
+            <span className="material-symbols-outlined text-primary">arrow_back</span>
+          </button>
+          <h1 className="text-sm font-bold text-primary truncate">{titlePrefix}: {data.lesson.number}-dars ({taskLabel})</h1>
+        </div>
+      </header>
+
+      <main className="pt-20 px-4 space-y-4">
+        {/* HERO */}
+        <section className={heroBg + " rounded-2xl p-4"}>
+          <div className="flex items-start gap-3">
+            <div className={"w-12 h-12 rounded-xl flex items-center justify-center " + heroIconBg}>
+              <span className="material-symbols-outlined">{heroIcon}</span>
+            </div>
+            <div className="flex-1">
+              <h2 className="text-base font-bold text-on-surface">{data.lesson.number}-dars — {taskLabel}</h2>
+              <p className="text-xs text-outline truncate">{data.lesson.title}</p>
+              <div className="flex gap-3 mt-2 text-xs">
+                <div><span className="text-outline">Avg:</span> <span className="font-bold">{data.stats.avg_score}/{data.lesson.max_score}</span></div>
+                <div><span className="text-outline">Topshirildi:</span> <span className="font-bold">{data.stats.submitted}/{data.stats.total}</span></div>
+                {data.stats.missing > 0 && <div><span className="text-outline">Yoq:</span> <span className="font-bold text-error">{data.stats.missing}</span></div>}
+              </div>
+            </div>
+          </div>
+          <div className="mt-3">
+            <div className="flex justify-between text-xs mb-1"><span className="text-on-surface-variant">Umumiy natija:</span><span className="font-bold">{data.stats.completion_pct}%</span></div>
+            <div className="w-full bg-outline-variant/30 h-2 rounded-full overflow-hidden">
+              <div className={(isWorst || isDrop ? "bg-error" : "bg-primary") + " h-full rounded-full"} style={{width: data.stats.completion_pct + "%"}}></div>
+            </div>
+          </div>
+        </section>
+
+        {/* STATS BENTO */}
+        <section className="grid grid-cols-2 gap-2">
+          <button onClick={() => setActiveTab("low")} className={(activeTab === "low" ? "ring-2 ring-error " : "") + "bg-white border border-outline-variant p-3 rounded-xl text-left active:scale-95 transition-transform"}>
+            <span className="material-symbols-outlined text-error text-base">trending_down</span>
+            <p className="text-[10px] text-outline uppercase tracking-wider mt-1">Past ball</p>
+            <p className="text-xl font-bold text-on-surface">{data.stats.low} <span className="text-xs font-normal text-outline">ta</span></p>
+          </button>
+          <button onClick={() => setActiveTab("missing")} className={(activeTab === "missing" ? "ring-2 ring-outline " : "") + "bg-white border border-outline-variant p-3 rounded-xl text-left active:scale-95 transition-transform"}>
+            <span className="material-symbols-outlined text-outline text-base">person_off</span>
+            <p className="text-[10px] text-outline uppercase tracking-wider mt-1">Topshirmagan</p>
+            <p className="text-xl font-bold text-on-surface">{data.stats.missing} <span className="text-xs font-normal text-outline">ta</span></p>
+          </button>
+          <button onClick={() => setActiveTab("medium")} className={(activeTab === "medium" ? "ring-2 ring-secondary " : "") + "bg-white border border-outline-variant p-3 rounded-xl text-left active:scale-95 transition-transform"}>
+            <span className="material-symbols-outlined text-secondary text-base">equalizer</span>
+            <p className="text-[10px] text-outline uppercase tracking-wider mt-1">Orta ball</p>
+            <p className="text-xl font-bold text-on-surface">{data.stats.medium} <span className="text-xs font-normal text-outline">ta</span></p>
+          </button>
+          <button onClick={() => setActiveTab("high")} className={(activeTab === "high" ? "ring-2 ring-primary " : "") + "bg-white border border-outline-variant p-3 rounded-xl text-left active:scale-95 transition-transform"}>
+            <span className="material-symbols-outlined text-primary text-base">stars</span>
+            <p className="text-[10px] text-outline uppercase tracking-wider mt-1">Yaxshi ball</p>
+            <p className="text-xl font-bold text-on-surface">{data.stats.high} <span className="text-xs font-normal text-outline">ta</span></p>
+          </button>
+        </section>
+
+        {/* TAB NAV */}
+        <nav className="flex overflow-x-auto gap-2 border-b border-outline-variant -mx-4 px-4 pb-1" style={{scrollbarWidth: "none"}}>
+          <button onClick={() => setActiveTab("all")} className={"flex-shrink-0 py-2 px-3 text-xs font-semibold " + (activeTab === "all" ? "text-primary border-b-2 border-primary" : "text-outline")}>Hammasi ({data.stats.total})</button>
+          {data.stats.missing > 0 && <button onClick={() => setActiveTab("missing")} className={"flex-shrink-0 py-2 px-3 text-xs font-semibold " + (activeTab === "missing" ? "text-primary border-b-2 border-primary" : "text-outline")}>Topshirmagan ({data.stats.missing})</button>}
+          {data.stats.low > 0 && <button onClick={() => setActiveTab("low")} className={"flex-shrink-0 py-2 px-3 text-xs font-semibold " + (activeTab === "low" ? "text-primary border-b-2 border-primary" : "text-outline")}>Past ({data.stats.low})</button>}
+          {data.stats.medium > 0 && <button onClick={() => setActiveTab("medium")} className={"flex-shrink-0 py-2 px-3 text-xs font-semibold " + (activeTab === "medium" ? "text-primary border-b-2 border-primary" : "text-outline")}>Orta ({data.stats.medium})</button>}
+          {data.stats.high > 0 && <button onClick={() => setActiveTab("high")} className={"flex-shrink-0 py-2 px-3 text-xs font-semibold " + (activeTab === "high" ? "text-primary border-b-2 border-primary" : "text-outline")}>Yaxshi ({data.stats.high})</button>}
+        </nav>
+
+        {/* STUDENTS LIST */}
+        <section className="space-y-2">
+          {filteredStudents.map((st, i) => {
+            const initials = (st.full_name || "??").split(" ").map(w => w[0]).slice(0, 2).join("").toUpperCase();
+            let badge, badgeColor, scoreDisplay;
+            if (st.category === "missing") { badge = "Topshirmagan"; badgeColor = "text-error bg-error/10"; scoreDisplay = "—"; }
+            else if (st.category === "low") { badge = "Past (" + st.score + ")"; badgeColor = "text-error bg-error/10"; scoreDisplay = st.score; }
+            else if (st.category === "medium") { badge = "Orta (" + st.score + ")"; badgeColor = "text-on-secondary-container bg-secondary-container"; scoreDisplay = st.score; }
+            else { badge = isBest && st.score === data.lesson.max_score ? "Maks" : "Yaxshi (" + st.score + ")"; badgeColor = "text-primary-container bg-primary-fixed"; scoreDisplay = st.score; }
+            
+            return (
+              <div key={st.id} className="bg-white p-3 rounded-xl border border-outline-variant flex items-center justify-between">
+                <div className="flex items-center gap-3 flex-1 min-w-0">
+                  <div className={"w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0 " + (st.category === "missing" ? "bg-surface-container text-outline" : st.category === "low" ? "bg-error/10 text-error" : st.category === "medium" ? "bg-secondary-container/50 text-secondary" : "bg-primary/10 text-primary")}>{initials}</div>
+                  <div className="min-w-0">
+                    <h4 className="text-sm font-semibold text-on-surface truncate">{st.full_name}</h4>
+                    <span className={"inline-block text-[10px] px-2 py-0.5 rounded-full mt-0.5 " + badgeColor}>{badge}</span>
+                  </div>
+                </div>
+                <div className="text-right ml-2">
+                  <p className="text-base font-bold text-on-surface">{scoreDisplay}</p>
+                  <p className="text-[10px] text-outline">/{data.lesson.max_score}</p>
+                </div>
+              </div>
+            );
+          })}
+          {filteredStudents.length === 0 && <div className="text-center py-8 text-outline text-sm">Oquvchi topilmadi</div>}
+        </section>
+      </main>
+
+      {/* STICKY FAB */}
+      <div className="fixed bottom-0 left-0 w-full z-40 bg-white/80 backdrop-blur-md border-t border-outline-variant px-4 py-3 space-y-2">
+        {(isWorst || isDrop) && (
+          <>
+            <button onClick={() => alert("Eslatma yuborildi (tez orada real ishlaydi)")} className="w-full h-12 bg-primary text-white rounded-xl flex items-center justify-center gap-2 font-semibold text-sm active:scale-95">
+              <span className="material-symbols-outlined text-base">send</span>
+              {isWorst ? "Topshirmaganlarga eslatma" : "Tushganlarga eslatma"}
+            </button>
+            <button onClick={() => alert("Maslahat yuborildi (tez orada real ishlaydi)")} className="w-full h-12 border border-primary text-primary bg-white rounded-xl flex items-center justify-center gap-2 font-semibold text-sm active:scale-95">
+              <span className="material-symbols-outlined text-base">tips_and_updates</span>
+              {isWorst ? "Past ballga maslahat" : "Kuratorga xabar"}
+            </button>
+          </>
+        )}
+        {(isBest || isRise) && (
+          <>
+            <button onClick={() => alert("Tabriklash yuborildi (tez orada real ishlaydi)")} className="w-full h-12 bg-primary text-white rounded-xl flex items-center justify-center gap-2 font-semibold text-sm active:scale-95">
+              <span className="material-symbols-outlined text-base">celebration</span>
+              {isBest ? "Hammasiga tabriklash" : "Osganlarni tabriklash"}
+            </button>
+            {isBest && <button onClick={() => alert("Bonus ball berish - tez orada")} className="w-full h-12 border border-primary text-primary bg-white rounded-xl flex items-center justify-center gap-2 font-semibold text-sm active:scale-95">
+              <span className="material-symbols-outlined text-base">stars</span>
+              Bonus ball berish
+            </button>}
+          </>
+        )}
+      </div>
     </div>
   );
 }
