@@ -79,6 +79,9 @@ export const studentAPI = {
     const s = sort ? `&sort=${sort}` : "";
     return apiFetch(`/api/admin/submissions/pending?task_type=${taskType || "all"}${gid}${s}`);
   },
+  async getAdminLessons() {
+    return apiFetch(`/api/admin/lessons`);
+  },
   async reviewSubmission(submissionId, payload) {
     return apiFetch(`/api/admin/submission/${submissionId}/review`, {
       method: "POST",
