@@ -1319,7 +1319,8 @@ function DrilldownPage({ drilldown, onBack }) {
       </header>
 
       <main className="pt-20 px-4 space-y-4">
-        {/* HERO */}
+        {/* HERO - BEST/WORST */}
+        {(isBest || isWorst) && (
         <section className={heroBg + " rounded-2xl p-4"}>
           <div className="flex items-start gap-3">
             <div className={"w-12 h-12 rounded-xl flex items-center justify-center " + heroIconBg}>
@@ -1338,13 +1339,67 @@ function DrilldownPage({ drilldown, onBack }) {
           <div className="mt-3">
             <div className="flex justify-between text-xs mb-1"><span className="text-on-surface-variant">Umumiy natija:</span><span className="font-bold">{data.stats.completion_pct}%</span></div>
             <div className="w-full bg-outline-variant/30 h-2 rounded-full overflow-hidden">
-              <div className={(isWorst || isDrop ? "bg-error" : "bg-primary") + " h-full rounded-full"} style={{width: data.stats.completion_pct + "%"}}></div>
+              <div className={(isWorst ? "bg-error" : "bg-primary") + " h-full rounded-full"} style={{width: data.stats.completion_pct + "%"}}></div>
             </div>
           </div>
         </section>
+        )}
 
-        {/* STATS BENTO */}
-        <section className="grid grid-cols-2 gap-2">
+        {/* HERO - RISE/DROP */}
+        {(isRise || isDrop) && data.previous_lesson_number && (() => {
+          const prevAvg = data.students.filter(s => s.previous_score != null).reduce((a, s) => a + s.previous_score, 0) / Math.max(data.students.filter(s => s.previous_score != null).length, 1);
+          const currAvg = data.students.filter(s => s.score != null).reduce((a, s) => a + s.score, 0) / Math.max(data.students.filter(s => s.score != null).length, 1);
+          const changePct = prevAvg > 0 ? Math.round(((currAvg - prevAvg) / prevAvg) * 100) : 0;
+          const changedCount = data.students.length;
+          return (
+            <>
+              <section className={heroBg + " rounded-2xl p-4"}>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <span className={"material-symbols-outlined " + (isRise ? "text-primary" : "text-error") + " text-2xl"}>{heroIcon}</span>
+                    <span className={(isRise ? "text-primary" : "text-error") + " text-xl font-bold"}>
+                      {changePct > 0 ? "+" : ""}{changePct}% {isRise ? "o'sish" : "tushish"}
+                    </span>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-2 bg-white/40 p-2 rounded-lg">
+                  <div className="text-center">
+                    <p className="text-[10px] text-outline">{data.previous_lesson_number}-dars (Oldingi)</p>
+                    <p className="text-2xl font-bold text-on-surface">{prevAvg.toFixed(1)}</p>
+                  </div>
+                  <div className="text-center border-l border-outline-variant">
+                    <p className={"text-[10px] " + (isRise ? "text-primary" : "text-error")}>{data.lesson.number}-dars (Hozir)</p>
+                    <p className={"text-2xl font-bold " + (isRise ? "text-primary" : "text-error")}>{currAvg.toFixed(1)}</p>
+                  </div>
+                </div>
+                <div className="mt-3 flex items-center gap-2 text-xs text-on-surface-variant">
+                  <span className="material-symbols-outlined text-sm">group</span>
+                  <span>{changedCount} ta o'quvchi {isRise ? "yaxshi natija ko'rsatdi" : "natija pasaydi"}</span>
+                </div>
+              </section>
+
+              {/* MINI BAR CHART */}
+              <section className="bg-white rounded-2xl p-4 border border-outline-variant">
+                <h3 className="text-sm font-bold text-primary mb-3">Progressiv taqqoslash</h3>
+                <div className="flex items-end justify-around h-32 gap-4 pt-2">
+                  <div className="flex flex-col items-center gap-2 flex-1 max-w-[80px]">
+                    <div className="w-full bg-outline-variant/40 rounded-t-lg transition-all duration-700" style={{height: Math.max((prevAvg / data.lesson.max_score) * 100, 5) + "%"}}></div>
+                    <span className="text-[10px] text-outline">{data.previous_lesson_number}-dars</span>
+                    <span className="text-xs font-bold">{prevAvg.toFixed(1)}</span>
+                  </div>
+                  <div className="flex flex-col items-center gap-2 flex-1 max-w-[80px]">
+                    <div className={(isRise ? "bg-primary" : "bg-error") + " w-full rounded-t-lg transition-all duration-700"} style={{height: Math.max((currAvg / data.lesson.max_score) * 100, 5) + "%"}}></div>
+                    <span className={"text-[10px] font-bold " + (isRise ? "text-primary" : "text-error")}>{data.lesson.number}-dars</span>
+                    <span className="text-xs font-bold">{currAvg.toFixed(1)}</span>
+                  </div>
+                </div>
+              </section>
+            </>
+          );
+        })()}
+
+        {/* STATS BENTO - faqat Best/Worst */}
+        {(isBest || isWorst) && <section className="grid grid-cols-2 gap-2">
           <button onClick={() => setActiveTab("low")} className={(activeTab === "low" ? "ring-2 ring-error " : "") + "bg-white border border-outline-variant p-3 rounded-xl text-left active:scale-95 transition-transform"}>
             <span className="material-symbols-outlined text-error text-base">trending_down</span>
             <p className="text-[10px] text-outline uppercase tracking-wider mt-1">Past ball</p>
@@ -1365,19 +1420,25 @@ function DrilldownPage({ drilldown, onBack }) {
             <p className="text-[10px] text-outline uppercase tracking-wider mt-1">Yaxshi ball</p>
             <p className="text-xl font-bold text-on-surface">{data.stats.high} <span className="text-xs font-normal text-outline">ta</span></p>
           </button>
-        </section>
+        </section>}
 
-        {/* TAB NAV */}
-        <nav className="flex overflow-x-auto gap-2 border-b border-outline-variant -mx-4 px-4 pb-1" style={{scrollbarWidth: "none"}}>
+        {/* TAB NAV - faqat Best/Worst */}
+        {(isBest || isWorst) && <nav className="flex overflow-x-auto gap-2 border-b border-outline-variant -mx-4 px-4 pb-1" style={{scrollbarWidth: "none"}}>
           <button onClick={() => setActiveTab("all")} className={"flex-shrink-0 py-2 px-3 text-xs font-semibold " + (activeTab === "all" ? "text-primary border-b-2 border-primary" : "text-outline")}>Hammasi ({data.stats.total})</button>
           {data.stats.missing > 0 && <button onClick={() => setActiveTab("missing")} className={"flex-shrink-0 py-2 px-3 text-xs font-semibold " + (activeTab === "missing" ? "text-primary border-b-2 border-primary" : "text-outline")}>Topshirmagan ({data.stats.missing})</button>}
           {data.stats.low > 0 && <button onClick={() => setActiveTab("low")} className={"flex-shrink-0 py-2 px-3 text-xs font-semibold " + (activeTab === "low" ? "text-primary border-b-2 border-primary" : "text-outline")}>Past ({data.stats.low})</button>}
           {data.stats.medium > 0 && <button onClick={() => setActiveTab("medium")} className={"flex-shrink-0 py-2 px-3 text-xs font-semibold " + (activeTab === "medium" ? "text-primary border-b-2 border-primary" : "text-outline")}>Orta ({data.stats.medium})</button>}
           {data.stats.high > 0 && <button onClick={() => setActiveTab("high")} className={"flex-shrink-0 py-2 px-3 text-xs font-semibold " + (activeTab === "high" ? "text-primary border-b-2 border-primary" : "text-outline")}>Yaxshi ({data.stats.high})</button>}
-        </nav>
+        </nav>}
 
         {/* STUDENTS LIST */}
         <section className="space-y-2">
+          {(isRise || isDrop) && (
+            <h3 className="text-sm font-bold text-primary flex items-center gap-2 mb-2">
+              <span className={"material-symbols-outlined " + (isRise ? "text-primary" : "text-error")}>{isRise ? "arrow_upward" : "arrow_downward"}</span>
+              {isRise ? "O'sgan o'quvchilar" : "Tushgan o'quvchilar"} ({filteredStudents.length} ta)
+            </h3>
+          )}
           {filteredStudents.map((st, i) => {
             const initials = (st.full_name || "??").split(" ").map(w => w[0]).slice(0, 2).join("").toUpperCase();
             let badge, badgeColor, scoreDisplay;
@@ -1385,6 +1446,33 @@ function DrilldownPage({ drilldown, onBack }) {
             else if (st.category === "low") { badge = "Past (" + st.score + ")"; badgeColor = "text-error bg-error/10"; scoreDisplay = st.score; }
             else if (st.category === "medium") { badge = "Orta (" + st.score + ")"; badgeColor = "text-on-secondary-container bg-secondary-container"; scoreDisplay = st.score; }
             else { badge = isBest && st.score === data.lesson.max_score ? "Maks" : "Yaxshi (" + st.score + ")"; badgeColor = "text-primary-container bg-primary-fixed"; scoreDisplay = st.score; }
+            
+            // Rise/Drop boshqa render
+            if (isRise || isDrop) {
+              const changePct = st.change_percent || 0;
+              const changeColor = changePct > 0 ? "text-primary" : "text-error";
+              const bgInitial = changePct > 0 ? "bg-primary/10 text-primary" : "bg-error/10 text-error";
+              return (
+                <div key={st.id} className="bg-white p-3 rounded-xl border border-outline-variant flex items-center justify-between">
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <div className={"w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0 " + bgInitial}>{initials}</div>
+                    <div className="min-w-0">
+                      <h4 className="text-sm font-semibold text-on-surface truncate">{st.full_name}</h4>
+                      <div className="flex items-center gap-1 mt-0.5">
+                        <span className="text-[10px] text-outline">L{data.previous_lesson_number}: {st.previous_score?.toFixed(1)}</span>
+                        <span className="material-symbols-outlined text-[10px] text-outline">arrow_forward</span>
+                        <span className={"text-[10px] font-semibold " + changeColor}>L{data.lesson.number}: {st.score?.toFixed(1)}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-right ml-2">
+                    <span className={"text-sm font-bold " + changeColor + " bg-" + (changePct > 0 ? "primary" : "error") + "/10 px-2 py-1 rounded-full"}>
+                      {changePct > 0 ? "+" : ""}{changePct}%
+                    </span>
+                  </div>
+                </div>
+              );
+            }
             
             return (
               <div key={st.id} className="bg-white p-3 rounded-xl border border-outline-variant flex items-center justify-between">
