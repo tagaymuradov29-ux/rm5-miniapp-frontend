@@ -120,6 +120,8 @@ function AdminPanel({ authData, telegramId }) {
   const [showCourseTrend, setShowCourseTrend] = useState(false);
   const [drilldown, setDrilldown] = useState(null); // {type, lessonNumber, taskType, groupId}
   const [studentTrendId, setStudentTrendId] = useState(null);
+  const [showPending, setShowPending] = useState(false);
+  const [selectedSubmissionId, setSelectedSubmissionId] = useState(null);
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -163,6 +165,8 @@ function AdminPanel({ authData, telegramId }) {
       {adminTab === 'management' && mngSubPage === 'users' && usersSubPage === 'groups' && selectedGroupId && !drilldown && <AdminGroupTrend groupId={selectedGroupId} onBack={() => setSelectedGroupId(null)} onDrilldown={(d) => setDrilldown(d)} />}
       {drilldown && !studentTrendId && <DrilldownPage drilldown={drilldown} onBack={() => setDrilldown(null)} onSelectStudent={(uid) => setStudentTrendId(uid)} />}
       {studentTrendId && <StudentTrendPage userId={studentTrendId} initialTaskType={drilldown?.taskType || "all"} onBack={() => setStudentTrendId(null)} />}
+      {adminTab === 'management' && mngSubPage === 'pending' && !selectedSubmissionId && <AdminPendingList onBack={() => setMngSubPage(null)} onSelect={setSelectedSubmissionId} />}
+      {adminTab === 'management' && mngSubPage === 'pending' && selectedSubmissionId && <AdminReviewPage submissionId={selectedSubmissionId} onBack={() => setSelectedSubmissionId(null)} onDone={() => setSelectedSubmissionId(null)} />}
       {adminTab === 'stats' && <AdminStats />}
       {adminTab === 'settings' && <AdminSettings />}
       
@@ -1660,6 +1664,358 @@ function StudentTrendPage({ userId, initialTaskType, onBack }) {
           })}
         </section>
       </main>
+    </div>
+  );
+}
+
+
+// === PENDING HELPERS ===
+function formatTimeAgo(isoStr) {
+  if (!isoStr) return "";
+  const now = new Date();
+  const past = new Date(isoStr);
+  const diffMs = now - past;
+  const diffMin = Math.floor(diffMs / 60000);
+  const diffHr = Math.floor(diffMin / 60);
+  const diffDay = Math.floor(diffHr / 24);
+  if (diffMin < 60) return diffMin + " min oldin";
+  if (diffHr < 24) return diffHr + " soat oldin";
+  return diffDay + " kun oldin";
+}
+
+function timeColorClass(isoStr) {
+  if (!isoStr) return "bg-surface-container text-outline";
+  const diffHr = (new Date() - new Date(isoStr)) / 3600000;
+  if (diffHr < 6) return "bg-green-50 text-green-700 border border-green-100";
+  if (diffHr < 24) return "bg-yellow-50 text-yellow-700 border border-yellow-100";
+  return "bg-red-50 text-red-700 border border-red-100";
+}
+
+function typeColorBadge(type) {
+  const m = {
+    KONSPEKT: "bg-blue-100 text-blue-800",
+    WORKBOOK: "bg-purple-100 text-purple-800",
+    AMALIY: "bg-orange-100 text-orange-800",
+    INSTAGRAM_STORIES: "bg-pink-100 text-pink-800",
+    INSTAGRAM_REELS: "bg-red-100 text-red-800",
+  };
+  return m[type] || "bg-gray-100 text-gray-800";
+}
+
+// === ADMIN PENDING LIST ===
+function AdminPendingList({ onBack, onSelect }) {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [taskType, setTaskType] = useState("all");
+  const [groupId, setGroupId] = useState(null);
+  const [sort, setSort] = useState("oldest");
+
+  const load = () => {
+    setLoading(true);
+    studentAPI.getAdminPendingSubmissions(taskType, groupId, sort)
+      .then(d => { setData(d); setLoading(false); })
+      .catch(() => setLoading(false));
+  };
+  useEffect(load, [taskType, groupId, sort]);
+
+  if (loading) return <div className="font-inter bg-background min-h-screen flex items-center justify-center"><div>Yuklanmoqda...</div></div>;
+
+  const stats = data?.stats || {by_type: {}};
+  const submissions = data?.submissions || [];
+
+  return (
+    <div className="font-inter bg-background min-h-screen pb-24">
+      <header className="fixed top-0 left-0 w-full z-50 flex items-center justify-between px-4 bg-surface h-14 border-b border-outline-variant">
+        <div className="flex items-center gap-3">
+          <button onClick={onBack} className="active:scale-95">
+            <span className="material-symbols-outlined text-primary">arrow_back</span>
+          </button>
+          <h1 className="text-base font-bold text-primary">Baholanmagan vazifalar</h1>
+        </div>
+      </header>
+
+      <main className="pt-20 px-4 space-y-3">
+        {/* Hero */}
+        <section className="bg-primary/5 rounded-2xl p-4 border border-primary/10">
+          <div className="flex items-start justify-between mb-3">
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <span className="material-symbols-outlined text-primary">notifications_active</span>
+                <span className="text-base font-bold text-primary">{stats.total} ta vazifa kutmoqda</span>
+              </div>
+              <p className="text-[10px] text-outline">Eng eski: {formatTimeAgo(stats.oldest_at)}</p>
+            </div>
+            <div className="bg-primary-container text-white w-10 h-10 rounded-xl flex items-center justify-center font-bold">{stats.total}</div>
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            <div className="bg-white/60 p-2 rounded-lg">
+              <p className="text-[10px] text-outline">Konspekt</p>
+              <p className="text-base font-bold text-primary">{stats.by_type.konspekt || 0}</p>
+            </div>
+            <div className="bg-white/60 p-2 rounded-lg">
+              <p className="text-[10px] text-outline">Workbook</p>
+              <p className="text-base font-bold text-primary">{stats.by_type.workbook || 0}</p>
+            </div>
+            <div className="bg-white/60 p-2 rounded-lg">
+              <p className="text-[10px] text-outline">Reels</p>
+              <p className="text-base font-bold text-primary">{stats.by_type.reels || 0}</p>
+            </div>
+          </div>
+        </section>
+
+        {/* Filter chips - task type */}
+        <div className="flex gap-2 overflow-x-auto pb-1" style={{scrollbarWidth: "none"}}>
+          {[
+            {id: "all", label: "Hammasi", n: stats.total},
+            {id: "konspekt", label: "Konspekt", n: stats.by_type.konspekt},
+            {id: "workbook", label: "Workbook", n: stats.by_type.workbook},
+            {id: "amaliy", label: "Amaliy", n: stats.by_type.amaliy},
+            {id: "stories", label: "Stories", n: stats.by_type.stories},
+            {id: "reels", label: "Reels", n: stats.by_type.reels},
+          ].map(t => (
+            <button key={t.id} onClick={() => setTaskType(t.id)}
+              className={"flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap " + 
+                (taskType === t.id ? "bg-primary text-white" : "bg-white border border-outline-variant text-on-surface-variant")}>
+              {t.label} ({t.n || 0})
+            </button>
+          ))}
+        </div>
+
+        {/* Group filter */}
+        <div className="flex gap-2 overflow-x-auto pb-1" style={{scrollbarWidth: "none"}}>
+          {[
+            {id: null, label: "Hammasi guruh"},
+            {id: 1, label: "1-guruh"},
+            {id: 3, label: "2-guruh"},
+            {id: 2, label: "3-guruh"},
+          ].map(g => (
+            <button key={g.id || "all"} onClick={() => setGroupId(g.id)}
+              className={"flex-shrink-0 px-3 py-1.5 rounded-full text-[11px] font-semibold whitespace-nowrap border " +
+                (groupId === g.id ? "bg-surface-container-high border-primary text-primary" : "bg-white border-outline-variant text-on-surface-variant")}>
+              {g.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Sort */}
+        <div className="flex items-center justify-between text-xs">
+          <span className="text-outline flex items-center gap-1"><span className="material-symbols-outlined text-sm">sort</span>Saralash:</span>
+          <div className="flex gap-3">
+            <button onClick={() => setSort("oldest")} className={sort === "oldest" ? "text-primary font-bold" : "text-outline"}>Eng eski</button>
+            <button onClick={() => setSort("newest")} className={sort === "newest" ? "text-primary font-bold" : "text-outline"}>Eng yangi</button>
+            <button onClick={() => setSort("student")} className={sort === "student" ? "text-primary font-bold" : "text-outline"}>Oquvchi</button>
+          </div>
+        </div>
+
+        {/* Submissions list */}
+        {submissions.length === 0 ? (
+          <div className="text-center py-12">
+            <div className="text-4xl mb-2">Done</div>
+            <h3 className="text-base font-bold text-primary mb-1">Hammasi tekshirilgan!</h3>
+            <p className="text-xs text-outline">Baholanmagan vazifa yoq</p>
+          </div>
+        ) : (
+          <section className="space-y-2">
+            {submissions.map(s => {
+              const initials = (s.user_full_name || "??").split(" ").map(w => w[0]).slice(0,2).join("").toUpperCase();
+              return (
+                <button key={s.id} onClick={() => onSelect(s.id)} className="w-full bg-white rounded-2xl p-3 shadow-sm border border-outline-variant text-left active:scale-[0.98] transition-transform">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="w-10 h-10 rounded-full bg-secondary-container flex items-center justify-center font-bold text-on-secondary-container text-sm flex-shrink-0">{initials}</div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-sm font-bold text-on-surface truncate">{s.user_full_name}</h3>
+                      <p className="text-[10px] text-outline">{s.group_name || "Guruhsiz"}</p>
+                    </div>
+                    <span className={"text-[10px] font-bold px-2 py-1 rounded-md " + typeColorBadge(s.type)}>{s.type}</span>
+                  </div>
+                  <div className="pl-13 flex items-center justify-between text-[11px]">
+                    <span className="text-on-surface-variant">{s.lesson_number ? s.lesson_number + "-dars" : "—"} · <span className="font-semibold">{s.lesson_title || "Reels"}</span></span>
+                  </div>
+                  <div className="flex items-center justify-between mt-2 text-[10px]">
+                    <span className={"px-2 py-0.5 rounded font-semibold " + timeColorClass(s.submitted_at)}>{formatTimeAgo(s.submitted_at)}</span>
+                    <span className="material-symbols-outlined text-outline text-base">chevron_right</span>
+                  </div>
+                </button>
+              );
+            })}
+          </section>
+        )}
+      </main>
+    </div>
+  );
+}
+
+// === ADMIN REVIEW PAGE ===
+function AdminReviewPage({ submissionId, onBack, onDone }) {
+  const [submission, setSubmission] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [score, setScore] = useState(0);
+  const [comment, setComment] = useState("");
+  const [isLate, setIsLate] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    studentAPI.getAdminPendingSubmissions("all").then(d => {
+      const found = (d.submissions || []).find(s => s.id === submissionId);
+      if (found) {
+        setSubmission(found);
+        setScore(Math.floor((found.max_score || 10) * 0.8));
+      }
+      setLoading(false);
+    }).catch(() => setLoading(false));
+  }, [submissionId]);
+
+  const handleReview = async (approved) => {
+    if (submitting) return;
+    if (!approved && !comment.trim()) {
+      alert("Rad etish uchun izoh majburiy!");
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const tg = window.Telegram?.WebApp?.initDataUnsafe?.user?.id;
+      await studentAPI.reviewSubmission(submissionId, {
+        score: approved ? score : 0,
+        comment: comment,
+        approved: approved,
+        is_late: isLate,
+        reviewer_telegram_id: tg,
+      });
+      alert(approved ? "Tasdiqlandi! " + score + " ball berildi" : "Rad etildi");
+      onDone();
+    } catch (e) {
+      alert("Xato: " + e.message);
+      setSubmitting(false);
+    }
+  };
+
+  if (loading) return <div className="font-inter bg-background min-h-screen flex items-center justify-center"><div>Yuklanmoqda...</div></div>;
+  if (!submission) return <div className="font-inter bg-background min-h-screen flex items-center justify-center"><div>Vazifa topilmadi</div></div>;
+
+  const initials = (submission.user_full_name || "??").split(" ").map(w => w[0]).slice(0,2).join("").toUpperCase();
+  const maxScore = submission.max_score || 10;
+  const quickButtons = maxScore <= 10 ? [0, 3, 5, 7, 10] : maxScore <= 20 ? [0, 5, 10, 15, 20] : [0, 10, 25, 40, 50];
+
+  return (
+    <div className="font-inter bg-background min-h-screen pb-40">
+      <header className="fixed top-0 left-0 w-full z-50 flex items-center justify-between px-4 bg-surface h-14 border-b border-outline-variant">
+        <div className="flex items-center gap-3">
+          <button onClick={onBack} className="active:scale-95">
+            <span className="material-symbols-outlined text-primary">arrow_back</span>
+          </button>
+          <h1 className="text-base font-bold text-primary">Vazifani baholash</h1>
+        </div>
+      </header>
+
+      <main className="pt-20 px-4 space-y-4">
+        {/* User header */}
+        <section className="bg-white rounded-2xl p-4 border border-outline-variant flex items-center gap-3">
+          <div className="w-14 h-14 rounded-full bg-primary text-white flex items-center justify-center font-bold text-base">{initials}</div>
+          <div className="flex-1 min-w-0">
+            <h2 className="text-base font-bold text-on-surface truncate">{submission.user_full_name}</h2>
+            <p className="text-xs text-outline truncate">{submission.group_name || "—"} {submission.user_username ? "· @" + submission.user_username : ""}</p>
+            <p className="text-[10px] text-outline mt-1 flex items-center gap-1">
+              <span className="material-symbols-outlined text-xs">schedule</span>
+              {formatTimeAgo(submission.submitted_at)}
+            </p>
+          </div>
+        </section>
+
+        {/* Task badge */}
+        <section className="bg-primary-container rounded-2xl p-5 text-white">
+          <span className="text-[10px] font-bold bg-white/10 px-2 py-1 rounded-full inline-block mb-2">VAZIFA</span>
+          <h3 className="text-lg font-bold">{submission.type}{submission.lesson_number ? " — " + submission.lesson_number + "-dars" : ""}</h3>
+          {submission.lesson_title && <p className="text-xs opacity-90 mt-1">{submission.lesson_title}</p>}
+          {submission.speaker && <p className="text-[11px] opacity-80 mt-2 flex items-center gap-1"><span className="material-symbols-outlined text-xs">mic</span>{submission.speaker}</p>}
+        </section>
+
+        {/* Content */}
+        <section>
+          <h4 className="text-sm font-bold text-on-surface mb-2">Material</h4>
+          {submission.instagram_link ? (
+            <div className="bg-white rounded-2xl p-4 border border-outline-variant">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="material-symbols-outlined text-primary">link</span>
+                <span className="text-xs font-bold">Instagram</span>
+              </div>
+              <p className="text-xs text-on-surface mb-3 whitespace-pre-wrap">{submission.instagram_link}</p>
+              <a href={(submission.instagram_link.match(/https?:\/\/[^\s]+/) || [""])[0]} target="_blank" rel="noopener" className="inline-flex items-center gap-1 text-xs text-primary font-semibold underline">
+                <span className="material-symbols-outlined text-xs">open_in_new</span>
+                Instagramda ochish
+              </a>
+            </div>
+          ) : submission.file_id ? (
+            <div className="bg-white rounded-2xl p-4 border border-outline-variant">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-lg bg-blue-50 flex items-center justify-center">
+                  <span className="material-symbols-outlined text-blue-600">{submission.file_type === "photo" ? "image" : submission.file_type === "video" ? "video_file" : "description"}</span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold truncate">{submission.file_name || "Fayl"}</p>
+                  <p className="text-[10px] text-outline">{submission.file_type || "file"}</p>
+                </div>
+              </div>
+              <p className="text-[10px] text-outline mt-2">Telegram bot orqali ochish kerak (faylni ko'rish uchun)</p>
+            </div>
+          ) : (
+            <div className="bg-surface-container/50 rounded-2xl p-4 text-center text-outline text-xs">Material yoq</div>
+          )}
+        </section>
+
+        {/* Grading */}
+        <section className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h4 className="text-sm font-bold text-on-surface">Baholash</h4>
+            <div className="bg-primary text-white text-lg font-bold px-4 py-1 rounded-full">{score} / {maxScore}</div>
+          </div>
+
+          <div>
+            <input type="range" min="0" max={maxScore} step="1" value={score} onChange={e => setScore(Number(e.target.value))} className="w-full" />
+            <div className="flex justify-between mt-1 text-[10px] text-outline">
+              <span>0</span><span>{maxScore}</span>
+            </div>
+          </div>
+
+          <div className="flex gap-2 overflow-x-auto" style={{scrollbarWidth: "none"}}>
+            {quickButtons.map(v => (
+              <button key={v} onClick={() => setScore(v)}
+                className={"flex-shrink-0 px-4 py-2 rounded-full text-sm font-semibold " + 
+                  (score === v ? "bg-primary text-white" : "bg-white border border-outline-variant text-on-surface-variant")}>
+                {v}
+              </button>
+            ))}
+          </div>
+
+          <label className="flex items-center gap-3 p-3 bg-error-container/10 border border-error-container/30 rounded-2xl cursor-pointer">
+            <input type="checkbox" checked={isLate} onChange={e => setIsLate(e.target.checked)} className="w-5 h-5" />
+            <div className="flex-1">
+              <p className="text-xs font-bold text-error">Kechikkan deb belgilash</p>
+              <p className="text-[10px] text-outline">Ball kam beriladi</p>
+            </div>
+          </label>
+
+          <textarea value={comment} onChange={e => setComment(e.target.value)} maxLength={200} placeholder="Izoh (ixtiyoriy)"
+            className="w-full min-h-[80px] p-3 rounded-2xl border border-outline-variant focus:border-primary focus:outline-none text-sm" />
+
+          <div className="grid grid-cols-2 gap-2">
+            <button onClick={() => setComment("Ajoyib ish!")} className="p-2 bg-surface-container rounded-lg text-xs text-left">Ajoyib ish!</button>
+            <button onClick={() => setComment("Yaxshi")} className="p-2 bg-surface-container rounded-lg text-xs text-left">Yaxshi</button>
+            <button onClick={() => setComment("Tahrirlash kerak")} className="p-2 bg-surface-container rounded-lg text-xs text-left">Tahrirlash kerak</button>
+            <button onClick={() => setComment("Rad etilsin")} className="p-2 bg-surface-container rounded-lg text-xs text-left">Rad etilsin</button>
+          </div>
+        </section>
+      </main>
+
+      <div className="fixed bottom-0 left-0 w-full bg-white/80 backdrop-blur-md border-t border-outline-variant p-3 flex gap-2 z-50">
+        <button onClick={() => handleReview(false)} disabled={submitting}
+          className="flex-1 py-3 rounded-2xl border-2 border-error text-error font-bold text-sm active:scale-95 disabled:opacity-50">
+          RAD ETISH
+        </button>
+        <button onClick={() => handleReview(true)} disabled={submitting}
+          className="flex-[1.5] py-3 rounded-2xl bg-primary text-white font-bold text-sm shadow-lg active:scale-95 disabled:opacity-50">
+          {submitting ? "Saqlanmoqda..." : "TASDIQLASH"}
+        </button>
+      </div>
     </div>
   );
 }
