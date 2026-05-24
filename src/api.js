@@ -74,6 +74,18 @@ export const studentAPI = {
   async getAdminStudentTrend(userId, taskType) {
     return apiFetch(`/api/admin/student/${userId}/trend?task_type=${taskType || "all"}`);
   },
+  async getAdminPendingSubmissions(taskType, groupId, sort) {
+    const gid = groupId ? `&group_id=${groupId}` : "";
+    const s = sort ? `&sort=${sort}` : "";
+    return apiFetch(`/api/admin/submissions/pending?task_type=${taskType || "all"}${gid}${s}`);
+  },
+  async reviewSubmission(submissionId, payload) {
+    return apiFetch(`/api/admin/submission/${submissionId}/review`, {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify(payload),
+    });
+  },
 };
 
 /**
