@@ -119,6 +119,7 @@ function AdminPanel({ authData, telegramId }) {
   const [selectedGroupId, setSelectedGroupId] = useState(null);
   const [showCourseTrend, setShowCourseTrend] = useState(false);
   const [drilldown, setDrilldown] = useState(null); // {type, lessonNumber, taskType, groupId}
+  const [studentTrendId, setStudentTrendId] = useState(null);
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -160,7 +161,8 @@ function AdminPanel({ authData, telegramId }) {
 
       {adminTab === 'management' && mngSubPage === 'users' && usersSubPage === 'groups' && showCourseTrend && !drilldown && <AdminCourseTrend onBack={() => setShowCourseTrend(false)} onDrilldown={(d) => setDrilldown(d)} />}
       {adminTab === 'management' && mngSubPage === 'users' && usersSubPage === 'groups' && selectedGroupId && !drilldown && <AdminGroupTrend groupId={selectedGroupId} onBack={() => setSelectedGroupId(null)} onDrilldown={(d) => setDrilldown(d)} />}
-      {drilldown && <DrilldownPage drilldown={drilldown} onBack={() => setDrilldown(null)} />}
+      {drilldown && !studentTrendId && <DrilldownPage drilldown={drilldown} onBack={() => setDrilldown(null)} onSelectStudent={(uid) => setStudentTrendId(uid)} />}
+      {studentTrendId && <StudentTrendPage userId={studentTrendId} initialTaskType={drilldown?.taskType || "all"} onBack={() => setStudentTrendId(null)} />}
       {adminTab === 'stats' && <AdminStats />}
       {adminTab === 'settings' && <AdminSettings />}
       
@@ -1271,7 +1273,7 @@ function AdminGroupTrend({ groupId, onBack, onDrilldown }) {
 
 
 // === DRILLDOWN PAGE (4 turi: best/worst/rise/drop) ===
-function DrilldownPage({ drilldown, onBack }) {
+function DrilldownPage({ drilldown, onBack, onSelectStudent }) {
   const { type, lessonNumber, taskType, groupId } = drilldown;
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -1453,7 +1455,7 @@ function DrilldownPage({ drilldown, onBack }) {
               const changeColor = changePct > 0 ? "text-primary" : "text-error";
               const bgInitial = changePct > 0 ? "bg-primary/10 text-primary" : "bg-error/10 text-error";
               return (
-                <div key={st.id} className="bg-white p-3 rounded-xl border border-outline-variant flex items-center justify-between">
+                <button key={st.id} onClick={() => onSelectStudent && onSelectStudent(st.id)} className="w-full bg-white p-3 rounded-xl border border-outline-variant flex items-center justify-between text-left active:scale-[0.98] transition-transform">
                   <div className="flex items-center gap-3 flex-1 min-w-0">
                     <div className={"w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0 " + bgInitial}>{initials}</div>
                     <div className="min-w-0">
@@ -1465,17 +1467,18 @@ function DrilldownPage({ drilldown, onBack }) {
                       </div>
                     </div>
                   </div>
-                  <div className="text-right ml-2">
+                  <div className="text-right ml-2 flex items-center gap-2">
                     <span className={"text-sm font-bold " + changeColor + " bg-" + (changePct > 0 ? "primary" : "error") + "/10 px-2 py-1 rounded-full"}>
                       {changePct > 0 ? "+" : ""}{changePct}%
                     </span>
+                    <span className="material-symbols-outlined text-outline text-base">chevron_right</span>
                   </div>
-                </div>
+                </button>
               );
             }
             
             return (
-              <div key={st.id} className="bg-white p-3 rounded-xl border border-outline-variant flex items-center justify-between">
+              <button key={st.id} onClick={() => onSelectStudent && onSelectStudent(st.id)} className="w-full bg-white p-3 rounded-xl border border-outline-variant flex items-center justify-between text-left active:scale-[0.98] transition-transform">
                 <div className="flex items-center gap-3 flex-1 min-w-0">
                   <div className={"w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0 " + (st.category === "missing" ? "bg-surface-container text-outline" : st.category === "low" ? "bg-error/10 text-error" : st.category === "medium" ? "bg-secondary-container/50 text-secondary" : "bg-primary/10 text-primary")}>{initials}</div>
                   <div className="min-w-0">
@@ -1483,11 +1486,14 @@ function DrilldownPage({ drilldown, onBack }) {
                     <span className={"inline-block text-[10px] px-2 py-0.5 rounded-full mt-0.5 " + badgeColor}>{badge}</span>
                   </div>
                 </div>
-                <div className="text-right ml-2">
-                  <p className="text-base font-bold text-on-surface">{scoreDisplay}</p>
-                  <p className="text-[10px] text-outline">/{data.lesson.max_score}</p>
+                <div className="text-right ml-2 flex items-center gap-2">
+                  <div>
+                    <p className="text-base font-bold text-on-surface">{scoreDisplay}</p>
+                    <p className="text-[10px] text-outline">/{data.lesson.max_score}</p>
+                  </div>
+                  <span className="material-symbols-outlined text-outline text-base">chevron_right</span>
                 </div>
-              </div>
+              </button>
             );
           })}
           {filteredStudents.length === 0 && <div className="text-center py-8 text-outline text-sm">Oquvchi topilmadi</div>}
@@ -1521,6 +1527,139 @@ function DrilldownPage({ drilldown, onBack }) {
           </>
         )}
       </div>
+    </div>
+  );
+}
+
+
+// === STUDENT TREND PAGE ===
+function StudentTrendPage({ userId, initialTaskType, onBack }) {
+  const [taskType, setTaskType] = useState(initialTaskType || "all");
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const canvasRef = useRef(null);
+  const chartRef = useRef(null);
+
+  useEffect(() => {
+    setLoading(true);
+    studentAPI.getAdminStudentTrend(userId, taskType)
+      .then(d => { setData(d); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, [userId, taskType]);
+
+  useEffect(() => {
+    if (!canvasRef.current || !window.Chart || !data) return;
+    if (chartRef.current) chartRef.current.destroy();
+    const ctx = canvasRef.current.getContext("2d");
+    const gradient = ctx.createLinearGradient(0, 0, 0, 200);
+    gradient.addColorStop(0, "rgba(0, 59, 44, 0.3)");
+    gradient.addColorStop(1, "rgba(0, 59, 44, 0)");
+    chartRef.current = new window.Chart(ctx, {
+      type: "line",
+      data: {
+        labels: data.lessons.map(l => "D" + l.lesson_number),
+        datasets: [{
+          label: "Ball",
+          data: data.lessons.map(l => l.is_unlocked ? l.score : null),
+          borderColor: "#003b2c",
+          backgroundColor: gradient,
+          borderWidth: 3,
+          fill: true,
+          tension: 0.4,
+          pointRadius: 4,
+          pointBackgroundColor: "#003b2c",
+          pointHoverRadius: 7,
+          spanGaps: false,
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { grid: { display: false }, ticks: { font: { size: 10 }, color: "#6f7974" } },
+          y: { min: 0, max: data.max_score, grid: { color: "rgba(0,0,0,0.05)" }, ticks: { font: { size: 10 }, color: "#6f7974" } }
+        }
+      }
+    });
+    return () => { if (chartRef.current) chartRef.current.destroy(); };
+  }, [data]);
+
+  if (loading) return <div className="font-inter bg-background min-h-screen flex items-center justify-center"><div>Yuklanmoqda...</div></div>;
+  if (!data) return <div className="font-inter bg-background min-h-screen flex items-center justify-center"><div>Malumot yoq</div></div>;
+
+  const initials = (data.user.full_name || "??").split(" ").map(w => w[0]).slice(0,2).join("").toUpperCase();
+
+  return (
+    <div className="font-inter bg-background min-h-screen pb-24">
+      <header className="fixed top-0 left-0 w-full z-50 flex items-center justify-between px-4 bg-surface h-14 border-b border-outline-variant">
+        <div className="flex items-center gap-3 flex-1 min-w-0">
+          <button onClick={onBack} className="active:scale-95">
+            <span className="material-symbols-outlined text-primary">arrow_back</span>
+          </button>
+          <h1 className="text-sm font-bold text-primary truncate">Shaxsiy trend</h1>
+        </div>
+      </header>
+
+      <main className="pt-20 px-4 space-y-4">
+        {/* Profile Hero */}
+        <section className="bg-white rounded-2xl p-4 border border-outline-variant flex items-center gap-3">
+          <div className="w-14 h-14 rounded-full bg-primary text-white flex items-center justify-center font-bold text-base flex-shrink-0">{initials}</div>
+          <div className="flex-1 min-w-0">
+            <h2 className="text-base font-bold text-on-surface truncate">{data.user.full_name}</h2>
+            {data.user.username && <p className="text-xs text-outline">@{data.user.username}</p>}
+            <p className="text-[10px] text-outline mt-0.5">{data.user.group_name || "Guruhsiz"}</p>
+          </div>
+        </section>
+
+        <TaskFilter value={taskType} onChange={setTaskType} />
+
+        {/* Chart */}
+        <section className="bg-white rounded-2xl p-4 border border-outline-variant">
+          <h3 className="text-sm font-bold text-primary mb-3">{data.user.full_name.split(" ")[0]} trendi (16 dars)</h3>
+          <div className="h-[200px]"><canvas ref={canvasRef}></canvas></div>
+        </section>
+
+        <InsightsBento insights={data.insights} />
+
+        {/* Lessons list */}
+        <section className="space-y-2">
+          <h3 className="text-sm font-bold text-primary mb-1 px-1">Darslar tafsiloti</h3>
+          {data.lessons.map(l => {
+            if (!l.is_unlocked) {
+              return (
+                <div key={l.lesson_number} className="bg-surface-container/50 p-3 rounded-xl border border-outline-variant/50 flex items-center justify-between opacity-60">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-surface-container flex items-center justify-center text-outline text-xs font-bold">{l.lesson_number}</div>
+                    <div>
+                      <p className="text-xs font-semibold text-outline">{l.lesson_number}-dars</p>
+                      <p className="text-[10px] text-outline">Yopiq</p>
+                    </div>
+                  </div>
+                  <span className="material-symbols-outlined text-outline text-base">lock</span>
+                </div>
+              );
+            }
+            const catBg = l.category === "missing" ? "bg-error/10 text-error" : l.category === "low" ? "bg-error/10 text-error" : l.category === "medium" ? "bg-secondary-container/50 text-secondary" : "bg-primary/10 text-primary";
+            const catLabel = l.category === "missing" ? "Topshirmagan" : l.category === "low" ? "Past" : l.category === "medium" ? "Orta" : "Yaxshi";
+            return (
+              <div key={l.lesson_number} className="bg-white p-3 rounded-xl border border-outline-variant flex items-center justify-between">
+                <div className="flex items-center gap-3 flex-1 min-w-0">
+                  <div className={"w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs flex-shrink-0 " + catBg}>{l.lesson_number}</div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-on-surface truncate">{l.title}</p>
+                    <span className={"inline-block text-[10px] px-2 py-0.5 rounded-full mt-0.5 " + catBg}>{catLabel}</span>
+                  </div>
+                </div>
+                <div className="text-right ml-2">
+                  <p className="text-sm font-bold text-on-surface">{l.score.toFixed(1)}</p>
+                  <p className="text-[10px] text-outline">/{data.max_score}</p>
+                </div>
+              </div>
+            );
+          })}
+        </section>
+      </main>
     </div>
   );
 }
