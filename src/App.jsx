@@ -415,35 +415,110 @@ function AdminStats() {
 
 // ============== ADMIN SETTINGS ==============
 function AdminSettings() {
-  const items = [
-    { emoji: '⚙️', label: 'Sozlamalar', desc: 'Kurs, deadline\'lar, ballar, jarimalar' },
-    { emoji: '📤', label: 'Massa xabar', desc: 'Hammaga yoki guruhga xabar yuborish' },
-    { emoji: '📥', label: 'Excel eksport', desc: 'Ma\'lumotlarni Excel\'ga yuklash' },
+  const handleAlert = (label) => alert(label + " - tez orada qoshiladi");
+
+  const sections = [
+    {
+      title: "Kurs boshqaruv",
+      items: [
+        {icon: "school", color: "green", title: "Kurs ma'lumoti", desc: "Real Marketing 5.0 - 16 dars"},
+        {icon: "auto_stories", color: "yellow", title: "Darslarni boshqarish", desc: "4 ta ochiq, 12 ta yopiq"},
+        {icon: "stars", color: "purple", title: "Ball tizimi", desc: "Konspekt 10, Workbook 20, Amaliy 50"},
+      ],
+    },
+    {
+      title: "Foydalanuvchilar boshqaruv",
+      items: [
+        {icon: "group", color: "green", title: "Kuratorlar", desc: "3 ta faol kurator"},
+        {icon: "support_agent", color: "yellow", title: "Asistentlar", desc: "1 ta asistent (max 3)"},
+        {icon: "block", color: "red", title: "Bloklanganlar", desc: "Bloklangan foydalanuvchilar"},
+      ],
+    },
+    {
+      title: "Xabarlar va eslatmalar",
+      items: [
+        {icon: "send", color: "purple", title: "Massa xabar yuborish", desc: "46 ta o'quvchiga xabar"},
+        {icon: "notifications_active", color: "green", title: "Group Notifier", desc: "12:00, 21:00, 22:00", badge: "FAOL"},
+        {icon: "description", color: "purple", title: "Excel eksport", desc: "Barcha ma'lumotlarni yuklab olish"},
+      ],
+    },
+    {
+      title: "Tizim",
+      items: [
+        {icon: "database", color: "blue", title: "Database holati", desc: "46 o'quvchi · 16 dars"},
+        {icon: "history", color: "gray", title: "Admin harakatlari log", desc: "Oxirgi 10 ta amal"},
+        {icon: "contact_support", color: "green", title: "Yordam va aloqa", desc: "Texnik yordam"},
+      ],
+    },
+    {
+      title: "Akkaunt",
+      items: [
+        {icon: "system_update", color: "green", title: "Mini App ni yangilash", desc: "Cache tozalash"},
+        {icon: "info", color: "gray", title: "Mini App versiyasi", desc: "RM 5.0 v1.2.4"},
+      ],
+    },
   ];
+
+  const colorMap = {
+    green: "bg-green-100 text-green-700",
+    yellow: "bg-yellow-100 text-yellow-700",
+    purple: "bg-purple-100 text-purple-700",
+    red: "bg-red-100 text-red-700",
+    blue: "bg-blue-100 text-blue-700",
+    gray: "bg-gray-100 text-gray-700",
+  };
 
   return (
     <>
       <header className="fixed top-0 left-0 w-full z-50 flex items-center justify-between px-4 bg-surface h-14 border-b border-outline-variant">
         <h1 className="text-base font-bold text-primary">⚙️ Sozlamalar</h1>
       </header>
-      <main className="pt-20 px-4 space-y-4">
-        <section className="bg-white border border-outline-variant rounded-2xl divide-y divide-outline-variant overflow-hidden shadow-sm">
-          {items.map((item, i) => (
-            <button key={i} onClick={() => alert(item.label + ' tez orada')} 
-              className="w-full flex items-center justify-between p-4 hover:bg-surface-container-low active:scale-[0.99] transition-all">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-primary-fixed flex items-center justify-center text-2xl">
-                  {item.emoji}
-                </div>
-                <div className="text-left">
-                  <p className="text-sm font-semibold text-on-surface">{item.label}</p>
-                  <p className="text-xs text-on-surface-variant">{item.desc}</p>
-                </div>
-              </div>
-              <span className="material-symbols-outlined text-on-surface-variant">chevron_right</span>
+
+      <main className="pt-20 px-4 pb-24 space-y-6">
+        <section className="relative overflow-hidden rounded-2xl p-5 shadow-lg" style={{background: "linear-gradient(135deg, #003b2c 0%, #005440 100%)"}}>
+          <div className="absolute -right-8 -bottom-8 w-32 h-32 bg-white/5 rounded-full blur-3xl"></div>
+          <div className="relative z-10 flex items-center gap-4">
+            <div className="w-16 h-16 rounded-full bg-primary-fixed flex items-center justify-center border-2 border-white/20 flex-shrink-0">
+              <span className="text-primary font-bold text-2xl">S</span>
+            </div>
+            <div className="flex-1 min-w-0">
+              <h2 className="text-white font-semibold text-base truncate">Shahzod Tog'aymurodov</h2>
+              <p className="text-white/80 text-xs flex items-center gap-1.5 mt-1">
+                <span className="w-2 h-2 rounded-full bg-blue-400"></span>
+                Methodologist / Admin
+              </p>
+            </div>
+            <button onClick={() => handleAlert("Profil tahrirlash")} className="bg-white/10 hover:bg-white/20 px-3 py-2 rounded-xl text-white text-xs border border-white/20 flex-shrink-0">
+              Tahrirlash
             </button>
-          ))}
+          </div>
         </section>
+
+        {sections.map((sec, idx) => (
+          <section key={idx} className="space-y-2">
+            <h3 className="text-on-surface-variant font-semibold text-[11px] px-1 uppercase tracking-wider">{sec.title}</h3>
+            <div className="bg-white rounded-2xl border border-outline-variant shadow-sm overflow-hidden">
+              {sec.items.map((item, i) => (
+                <div key={i}>
+                  <button onClick={() => handleAlert(item.title)} className="w-full flex items-center gap-3 p-3 hover:bg-surface-container-low active:scale-[0.98] transition-all">
+                    <div className={"w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 " + colorMap[item.color]}>
+                      <span className="material-symbols-outlined text-xl">{item.icon}</span>
+                    </div>
+                    <div className="flex-1 text-left min-w-0">
+                      <h4 className="text-on-surface font-medium text-sm truncate">{item.title}</h4>
+                      <p className="text-on-surface-variant text-[11px] truncate">{item.desc}</p>
+                    </div>
+                    {item.badge && (
+                      <span className="px-2 py-0.5 bg-green-100 text-green-700 text-[10px] font-bold rounded-full flex-shrink-0">{item.badge}</span>
+                    )}
+                    <span className="material-symbols-outlined text-outline">chevron_right</span>
+                  </button>
+                  {i < sec.items.length - 1 && <div className="mx-4 border-t border-outline-variant"></div>}
+                </div>
+              ))}
+            </div>
+          </section>
+        ))}
       </main>
     </>
   );
