@@ -1116,6 +1116,46 @@ function AdminCourseTrend({ onBack }) {
             <div className="h-[200px]"><TrendChart lessons={data?.lessons || []} /></div>}
         </section>
         {!loading && data?.insights && <InsightsBento insights={data.insights} />}
+
+        {/* Stats Bento - Course only */}
+        {!loading && data && (
+          <section className="grid grid-cols-2 gap-2">
+            <div className="bg-primary-container p-4 rounded-2xl text-white">
+              <span className="material-symbols-outlined opacity-70 text-base">star</span>
+              <p className="text-[10px] opacity-80 mt-1">Eng faol guruh</p>
+              <p className="text-sm font-bold leading-tight mt-1">{data.most_active_group || "-"}</p>
+            </div>
+            <div className="bg-secondary-container p-4 rounded-2xl">
+              <span className="material-symbols-outlined text-primary text-base">trending_up</span>
+              <p className="text-[10px] text-outline mt-1">Tugallanish</p>
+              <p className="text-sm font-bold text-primary leading-tight mt-1">{data.completion_pct || 0}%</p>
+            </div>
+          </section>
+        )}
+
+        {/* TOP students */}
+        {!loading && data?.top_students && data.top_students.length > 0 && (
+          <section>
+            <h3 className="text-sm font-bold text-primary mb-2 px-1">TOP oquvchilar (shu vazifa)</h3>
+            <div className="space-y-2">
+              {data.top_students.slice(0, 5).map((st, i) => {
+                const medal = i === 0 ? "1" : i === 1 ? "2" : i === 2 ? "3" : (i+1);
+                return (
+                  <div key={st.id} className="bg-white p-3 rounded-xl flex items-center justify-between border border-outline-variant">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs">{medal}</div>
+                      <div>
+                        <p className="text-sm font-semibold">{st.full_name}</p>
+                        <p className="text-[10px] text-outline">{st.group_name || "-"}</p>
+                      </div>
+                    </div>
+                    <p className="text-sm font-bold text-primary">{st.score} b.</p>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        )}
       </main>
     </div>
   );
@@ -1184,6 +1224,43 @@ function AdminGroupTrend({ groupId, onBack }) {
             <div className="h-[200px]"><TrendChart lessons={data?.lessons || []} /></div>}
         </section>
         {!loading && data?.insights && <InsightsBento insights={data.insights} />}
+
+        {/* Problem students */}
+        {!loading && data?.problem_count > 0 && (
+          <section className="bg-error-container/20 border border-error/20 p-4 rounded-2xl">
+            <div className="flex items-start gap-3">
+              <span className="material-symbols-outlined text-error">report</span>
+              <div className="flex-1">
+                <h3 className="text-sm font-bold text-error">Etibor talab qiladi</h3>
+                <p className="text-xs text-on-surface-variant mt-1">{data.problem_count} nafar oquvchi songi ochiq darslarda topshirmagan</p>
+              </div>
+            </div>
+            <button onClick={() => alert("Tez orada")} className="mt-3 w-full bg-error text-white py-2.5 rounded-xl text-xs font-semibold active:scale-95">
+              Royxatni korish
+            </button>
+          </section>
+        )}
+
+        {/* TOP students */}
+        {!loading && data?.top_students && data.top_students.length > 0 && (
+          <section>
+            <h3 className="text-sm font-bold text-primary mb-2 px-1">Bu vazifa boyicha reyting</h3>
+            <div className="space-y-2">
+              {data.top_students.slice(0, 5).map((st, i) => (
+                <div key={st.id} className="bg-white p-3 rounded-xl flex items-center justify-between border border-outline-variant">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs">{i+1}</div>
+                    <div>
+                      <p className="text-sm font-semibold">{st.full_name}</p>
+                      <p className="text-[10px] text-outline">{st.group_name || "-"}</p>
+                    </div>
+                  </div>
+                  <p className="text-sm font-bold text-primary">{st.score} b.</p>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
       </main>
     </div>
   );
