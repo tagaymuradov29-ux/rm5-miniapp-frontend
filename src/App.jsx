@@ -375,7 +375,7 @@ function AdminManagement({ onNavigate, onSubPage }) {
         {/* Menu items */}
         <section className="bg-white border border-outline-variant rounded-2xl divide-y divide-outline-variant overflow-hidden shadow-sm">
           {items.map(item => (
-            <button key={item.id} onClick={() => item.id === 'users' ? onSubPage('users') : item.id === 'tasks' ? onSubPage('pending') : alert(item.label + ' sahifasi tez orada qoshiladi')} 
+            <button key={item.id} onClick={() => item.id === 'users' ? onSubPage('users') : item.id === 'tasks' ? onSubPage('pending') : item.id === 'lessons' ? onSubPage('lessons') : alert(item.label + ' sahifasi tez orada qoshiladi')} 
               className="w-full flex items-center justify-between p-4 hover:bg-surface-container-low active:scale-[0.99] transition-all">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-lg bg-primary-fixed flex items-center justify-center text-2xl">
@@ -2017,6 +2017,134 @@ function AdminReviewPage({ submissionId, onBack, onDone }) {
           {submitting ? "Saqlanmoqda..." : "TASDIQLASH"}
         </button>
       </div>
+    </div>
+  );
+}
+
+
+// === ADMIN LESSONS LIST ===
+function AdminLessonsList({ onBack }) {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState("all");
+
+  useEffect(() => {
+    studentAPI.getAdminLessons()
+      .then(d => { setData(d); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, []);
+
+  if (loading) return <div className="font-inter bg-background min-h-screen flex items-center justify-center"><div>Yuklanmoqda...</div></div>;
+
+  const stats = data?.stats || {total: 0, unlocked: 0, locked: 0, max_students: 46};
+  const allLessons = data?.lessons || [];
+  const lessons = filter === "unlocked" ? allLessons.filter(l => l.is_unlocked) :
+                  filter === "locked" ? allLessons.filter(l => !l.is_unlocked) :
+                  allLessons;
+
+  const formatDate = (iso) => {
+    if (!iso) return "—";
+    const d = new Date(iso);
+    const months = ["yan", "fev", "mar", "apr", "may", "iyun", "iyul", "avg", "sen", "okt", "noy", "dek"];
+    return d.getDate() + "-" + months[d.getMonth()];
+  };
+
+  return (
+    <div className="font-inter bg-background min-h-screen pb-24">
+      <header className="fixed top-0 left-0 w-full z-50 flex items-center justify-between px-4 bg-surface h-14 border-b border-outline-variant">
+        <div className="flex items-center gap-3">
+          <button onClick={onBack} className="active:scale-95">
+            <span className="material-symbols-outlined text-primary">arrow_back</span>
+          </button>
+          <h1 className="text-base font-bold text-primary">Darslar</h1>
+        </div>
+      </header>
+
+      <main className="pt-20 px-4 space-y-3">
+        <section className="bg-primary-container rounded-2xl p-4 text-white">
+          <h2 className="text-base font-bold mb-1">📚 Real Marketing 5.0</h2>
+          <p className="text-xs opacity-90 mb-3">16 dars dasturi</p>
+          <div className="grid grid-cols-3 gap-2 mt-3">
+            <div className="bg-white/10 p-2 rounded-lg text-center">
+              <p className="text-2xl font-bold">{stats.total}</p>
+              <p className="text-[10px] opacity-80">Jami</p>
+            </div>
+            <div className="bg-white/10 p-2 rounded-lg text-center">
+              <p className="text-2xl font-bold">{stats.unlocked}</p>
+              <p className="text-[10px] opacity-80">Ochiq</p>
+            </div>
+            <div className="bg-white/10 p-2 rounded-lg text-center">
+              <p className="text-2xl font-bold">{stats.locked}</p>
+              <p className="text-[10px] opacity-80">Yopiq</p>
+            </div>
+          </div>
+        </section>
+
+        <div className="flex gap-2">
+          {[
+            {id: "all", label: "Hammasi", n: stats.total},
+            {id: "unlocked", label: "Ochiq", n: stats.unlocked},
+            {id: "locked", label: "Yopiq", n: stats.locked},
+          ].map(t => (
+            <button key={t.id} onClick={() => setFilter(t.id)}
+              className={"flex-1 px-3 py-2 rounded-full text-xs font-semibold " + 
+                (filter === t.id ? "bg-primary text-white" : "bg-white border border-outline-variant text-on-surface-variant")}>
+              {t.label} ({t.n})
+            </button>
+          ))}
+        </div>
+
+        <section className="space-y-2">
+          {lessons.map(l => {
+            const max = stats.max_students || 46;
+            return (
+              <div key={l.id} className={"bg-white rounded-2xl p-3 shadow-sm border " + (l.is_unlocked ? "border-outline-variant" : "border-outline-variant opacity-60")}>
+                <div className="flex items-start justify-between mb-2">
+                  <div className="flex items-center gap-2 flex-1 min-w-0">
+                    <div className={"w-9 h-9 rounded-lg flex items-center justify-center font-bold text-sm flex-shrink-0 " + (l.is_unlocked ? "bg-primary text-white" : "bg-surface-container text-outline")}>{l.lesson_number}</div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-sm font-bold text-on-surface truncate">{l.title}</h3>
+                      <p className="text-[10px] text-outline truncate">{l.speaker || "—"} · {formatDate(l.lesson_date)}</p>
+                    </div>
+                  </div>
+                  <span className={"text-[10px] font-bold px-2 py-1 rounded-md flex-shrink-0 " + (l.is_unlocked ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-600")}>
+                    {l.is_unlocked ? "OCHIQ" : "YOPIQ"}
+                  </span>
+                </div>
+                {l.is_unlocked && (
+                  <div className="grid grid-cols-4 gap-1 mt-2 pt-2 border-t border-outline-variant">
+                    <div className="text-center">
+                      <p className="text-[10px] text-outline">Konsp.</p>
+                      <p className="text-xs font-bold text-primary">{Math.min(l.konspekt_count, max)}/{max}</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-[10px] text-outline">Workb.</p>
+                      <p className="text-xs font-bold text-primary">{Math.min(l.workbook_count, max)}/{max}</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-[10px] text-outline">Amaliy</p>
+                      <p className="text-xs font-bold text-primary">{Math.min(l.amaliy_count, max)}/{max}</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-[10px] text-outline">O'rt ball</p>
+                      <p className="text-xs font-bold text-primary">{l.avg_score.toFixed(1)}</p>
+                    </div>
+                  </div>
+                )}
+                {l.is_unlocked && (l.workbook_deadline || l.practical_deadline || l.pending_count > 0) && (
+                  <div className="flex justify-between items-center mt-2 pt-2 border-t border-outline-variant text-[10px]">
+                    <div className="flex gap-3">
+                      {l.workbook_deadline && <span className="text-outline">📘 <span className="font-semibold text-on-surface-variant">{formatDate(l.workbook_deadline)}</span></span>}
+                      {l.practical_deadline && <span className="text-outline">🛠 <span className="font-semibold text-on-surface-variant">{formatDate(l.practical_deadline)}</span></span>}
+                    </div>
+                    {l.pending_count > 0 && <span className="bg-yellow-100 text-yellow-800 px-1.5 py-0.5 rounded font-bold">⏳ {l.pending_count}</span>}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </section>
+      </main>
     </div>
   );
 }
