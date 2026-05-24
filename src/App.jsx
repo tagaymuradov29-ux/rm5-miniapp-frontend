@@ -168,7 +168,6 @@ function AdminPanel({ authData, telegramId }) {
       {adminTab === 'management' && mngSubPage === 'pending' && !selectedSubmissionId && <AdminPendingList onBack={() => setMngSubPage(null)} onSelect={setSelectedSubmissionId} />}
       {adminTab === 'management' && mngSubPage === 'pending' && selectedSubmissionId && <AdminReviewPage submissionId={selectedSubmissionId} onBack={() => setSelectedSubmissionId(null)} onDone={() => setSelectedSubmissionId(null)} />}
       {adminTab === 'management' && mngSubPage === 'lessons' && <AdminLessonsList onBack={() => setMngSubPage(null)} />}
-      {adminTab === 'stats' && <AdminStats />}
       {adminTab === 'stats' && <AdminStatistics />}
       {adminTab === 'settings' && <AdminSettings />}
       
