@@ -169,6 +169,7 @@ function AdminPanel({ authData, telegramId }) {
       {adminTab === 'management' && mngSubPage === 'pending' && selectedSubmissionId && <AdminReviewPage submissionId={selectedSubmissionId} onBack={() => setSelectedSubmissionId(null)} onDone={() => setSelectedSubmissionId(null)} />}
       {adminTab === 'management' && mngSubPage === 'lessons' && <AdminLessonsList onBack={() => setMngSubPage(null)} />}
       {adminTab === 'stats' && <AdminStats />}
+      {adminTab === 'statistics' && <AdminStatistics />}
       {adminTab === 'settings' && <AdminSettings />}
       
       <AdminBottomNav activeTab={adminTab} setActiveTab={setAdminTab} />
@@ -2221,6 +2222,187 @@ function AdminLessonsList({ onBack }) {
         </section>
       </main>
     </div>
+  );
+}
+
+
+// === ADMIN STATISTICS TAB ===
+function AdminStatistics() {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    studentAPI.getAdminStatsOverview()
+      .then(d => { setData(d); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, []);
+
+  if (loading) return <div className="font-inter bg-background min-h-screen flex items-center justify-center"><div>Yuklanmoqda...</div></div>;
+
+  const totals = data?.totals || {};
+  const progress = data?.tasks_progress || [];
+  const groups = data?.groups_ranking || [];
+  const topStudents = data?.top_students || [];
+
+  const taskLabels = {
+    konspekt: "Konspekt",
+    workbook: "Workbook",
+    amaliy: "Amaliy",
+    test: "Test",
+    stories: "Stories",
+    reels: "Reels",
+  };
+
+  const barColor = (pct) => {
+    if (pct >= 80) return "bg-green-500 text-green-600";
+    if (pct >= 50) return "bg-yellow-500 text-yellow-600";
+    return "bg-red-500 text-red-600";
+  };
+
+  return (
+    <>
+      <header className="fixed top-0 left-0 w-full z-50 flex items-center justify-between px-4 bg-surface h-14 border-b border-outline-variant">
+        <h1 className="text-base font-bold text-primary flex items-center gap-2">📊 Statistika</h1>
+      </header>
+
+      <main className="pt-20 px-4 pb-24 space-y-5">
+        {/* Hero Stats */}
+        <section className="relative overflow-hidden rounded-2xl p-5 text-white shadow-lg" style={{background: "linear-gradient(135deg, #003b2c 0%, #005440 100%)"}}>
+          <div className="absolute -right-10 -bottom-10 w-40 h-40 bg-white/5 rounded-full blur-3xl"></div>
+          <div className="relative z-10">
+            <h2 className="text-base font-bold opacity-90">📚 Real Marketing 5.0</h2>
+            <p className="text-[11px] opacity-70 mb-4">Umumiy holat</p>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="bg-white/10 p-3 rounded-xl">
+                <p className="text-2xl font-bold">{totals.students || 0}</p>
+                <p className="text-[10px] opacity-80 uppercase tracking-wider">O'quvchi</p>
+              </div>
+              <div className="bg-white/10 p-3 rounded-xl">
+                <p className="text-2xl font-bold">{totals.lessons || 0} / {totals.lessons_unlocked || 0}</p>
+                <p className="text-[10px] opacity-80 uppercase tracking-wider">Dars (ochiq)</p>
+              </div>
+              <div className="bg-white/10 p-3 rounded-xl">
+                <p className="text-2xl font-bold">{totals.submissions || 0}</p>
+                <p className="text-[10px] opacity-80 uppercase tracking-wider">Topshiriqlar</p>
+              </div>
+              <div className="bg-white/10 p-3 rounded-xl">
+                <p className="text-2xl font-bold">{totals.submissions_24h || 0}</p>
+                <p className="text-[10px] opacity-80 uppercase tracking-wider">So'nggi 24 soat</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Mini Stats */}
+        <section className="grid grid-cols-3 gap-3">
+          <div className="bg-white p-3 rounded-2xl shadow-sm border border-outline-variant flex flex-col items-center">
+            <span className="material-symbols-outlined text-primary mb-1">task_alt</span>
+            <p className="text-lg font-bold text-primary">{totals.submissions_7d || 0}</p>
+            <p className="text-[10px] text-outline">Hafta</p>
+          </div>
+          <div className="bg-white p-3 rounded-2xl shadow-sm border border-outline-variant flex flex-col items-center">
+            <span className="material-symbols-outlined text-primary mb-1">stars</span>
+            <p className="text-lg font-bold text-primary">{totals.curators || 0}</p>
+            <p className="text-[10px] text-outline">Kuratorlar</p>
+          </div>
+          <div className="bg-white p-3 rounded-2xl shadow-sm border border-outline-variant flex flex-col items-center">
+            <span className="material-symbols-outlined text-primary mb-1">support_agent</span>
+            <p className="text-lg font-bold text-primary">{totals.assistants || 0}</p>
+            <p className="text-[10px] text-outline">Asistentlar</p>
+          </div>
+        </section>
+
+        {/* Vazifalar Progress */}
+        <section>
+          <h3 className="text-sm font-bold text-primary mb-3 flex items-center gap-2">📋 Vazifalar progress</h3>
+          <div className="bg-white rounded-2xl p-4 shadow-sm border border-outline-variant space-y-3">
+            {progress.map((p, i) => {
+              const colors = barColor(p.percent);
+              const [bg, text] = colors.split(" ");
+              return (
+                <div key={i} className="space-y-1.5">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-on-surface">{taskLabels[p.type] || p.type}</span>
+                    <span className={"text-xs font-bold " + text}>{p.percent}% ({p.completed}/{p.total})</span>
+                  </div>
+                  <div className="h-2 w-full bg-surface-container rounded-full overflow-hidden">
+                    <div className={"h-full rounded-full transition-all " + bg} style={{width: p.percent + "%"}}></div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+
+        {/* Guruhlar Reytingi - Podium */}
+        {groups.length >= 3 && (
+          <section>
+            <h3 className="text-sm font-bold text-primary mb-3 flex items-center gap-2">🏆 Guruhlar reytingi</h3>
+            <div className="bg-white rounded-2xl p-6 shadow-sm border border-outline-variant">
+              <div className="flex items-end justify-center gap-3 h-44">
+                {/* 2nd - chap */}
+                <div className="flex flex-col items-center">
+                  <div className="mb-2 text-center">
+                    <p className="text-[10px] text-outline">{groups[1].name.split(" ")[0]}</p>
+                    <p className="text-sm font-bold text-primary">{groups[1].avg_score}b</p>
+                  </div>
+                  <div className="w-16 h-20 bg-secondary-container rounded-t-lg flex items-center justify-center border-x border-t border-outline-variant">
+                    <span className="text-on-secondary-container font-bold text-2xl">2</span>
+                  </div>
+                </div>
+                {/* 1st - markaz */}
+                <div className="flex flex-col items-center">
+                  <div className="mb-2 text-center">
+                    <p className="text-xs text-primary font-bold">{groups[0].name.split(" ")[0]}</p>
+                    <p className="text-base font-bold text-primary-container">{groups[0].avg_score}b</p>
+                  </div>
+                  <div className="w-20 h-28 bg-primary-container rounded-t-lg flex items-center justify-center shadow-md">
+                    <span className="text-white font-bold text-3xl">1</span>
+                  </div>
+                </div>
+                {/* 3rd - ong */}
+                <div className="flex flex-col items-center">
+                  <div className="mb-2 text-center">
+                    <p className="text-[10px] text-outline">{groups[2].name.split(" ")[0]}</p>
+                    <p className="text-sm font-bold text-primary">{groups[2].avg_score}b</p>
+                  </div>
+                  <div className="w-16 h-14 bg-surface-container-high rounded-t-lg flex items-center justify-center border-x border-t border-outline-variant">
+                    <span className="text-on-surface-variant font-bold text-xl">3</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* TOP 5 */}
+        {topStudents.length > 0 && (
+          <section>
+            <h3 className="text-sm font-bold text-primary mb-3">🌟 TOP 5 o'quvchilar</h3>
+            <div className="bg-white rounded-2xl shadow-sm border border-outline-variant overflow-hidden">
+              {topStudents.map((s, i) => {
+                const isFirst = s.rank === 1;
+                return (
+                  <div key={s.user_id}>
+                    <div className="flex items-center justify-between p-3">
+                      <div className="flex items-center gap-3 flex-1 min-w-0">
+                        <div className={"w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs flex-shrink-0 " + (isFirst ? "bg-primary-container text-white" : "bg-surface-container text-on-surface")}>{s.rank}</div>
+                        <div className="min-w-0">
+                          <p className={"text-sm truncate " + (isFirst ? "font-bold" : "font-medium")}>{s.full_name}</p>
+                          <p className="text-[10px] text-outline truncate">{s.group_name}</p>
+                        </div>
+                      </div>
+                      <span className={"px-3 py-1 rounded-full font-bold text-xs flex-shrink-0 " + (isFirst ? "bg-secondary-container text-on-secondary-container" : "text-on-surface-variant")}>{s.total_score}b</span>
+                    </div>
+                    {i < topStudents.length - 1 && <div className="mx-3 border-t border-outline-variant/30"></div>}
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        )}
+      </main>
+    </>
   );
 }
 
