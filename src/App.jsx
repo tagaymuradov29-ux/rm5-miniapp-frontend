@@ -2006,7 +2006,7 @@ function AdminReviewPage({ submissionId, onBack, onDone }) {
         </section>
       </main>
 
-      <div className="fixed bottom-0 left-0 w-full bg-white/80 backdrop-blur-md border-t border-outline-variant p-3 flex gap-2 z-50">
+      <div className="fixed bottom-0 left-0 w-full bg-white border-t-2 border-primary p-4 flex gap-2 z-[60]" style={{paddingBottom: "calc(1rem + env(safe-area-inset-bottom))"}}>
         <button onClick={() => handleReview(false)} disabled={submitting}
           className="flex-1 py-3 rounded-2xl border-2 border-error text-error font-bold text-sm active:scale-95 disabled:opacity-50">
           RAD ETISH
