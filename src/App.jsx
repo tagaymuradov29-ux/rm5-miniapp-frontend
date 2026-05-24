@@ -346,7 +346,7 @@ function AdminManagement({ onNavigate, onSubPage }) {
   const items = [
     { id: 'users', icon: 'pending_actions', emoji: '👤', label: 'Foydalanuvchilar', desc: '46 ta o\'quvchi, 3 guruh, 4 kurator' },
     { id: 'lessons', icon: 'menu_book', emoji: '📚', label: 'Darslar', desc: '16 dars (4 ochiq, 12 yopiq)' },
-    { id: 'tasks', icon: 'assignment', emoji: '📝', label: 'Vazifalar', desc: 'PENDING vazifalarni tekshirish' },
+    { id: 'tasks', icon: 'assignment', emoji: '📝', label: 'Vazifalar', desc: 'Baholanmagan vazifalarni tekshirish' },
     { id: 'projects', icon: 'rocket_launch', emoji: '💼', label: 'Loyihalar', desc: 'O\'quvchilar loyihalari' },
     { id: 'bonus', icon: 'featured_seasonal_and_gifts', emoji: '🎁', label: 'Bonus ball berish', desc: 'Workshop, Stories, Qo\'shimcha' },
   ];
