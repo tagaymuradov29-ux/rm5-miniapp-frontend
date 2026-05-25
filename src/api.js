@@ -82,6 +82,9 @@ export const studentAPI = {
   async getAdminStatsOverview() {
     return apiFetch(`/api/admin/stats/overview`);
   },
+  async toggleLesson(lessonId) {
+    return apiFetch(`/api/admin/lesson/${lessonId}/toggle`, {method: "PATCH"});
+  },
   async getAdminLessons() {
     return apiFetch(`/api/admin/lessons`);
   },

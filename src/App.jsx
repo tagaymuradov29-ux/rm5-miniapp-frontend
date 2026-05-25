@@ -120,6 +120,7 @@ function AdminPanel({ authData, telegramId }) {
   const [showCourseTrend, setShowCourseTrend] = useState(false);
   const [drilldown, setDrilldown] = useState(null); // {type, lessonNumber, taskType, groupId}
   const [studentTrendId, setStudentTrendId] = useState(null);
+  const [showLessonsManage, setShowLessonsManage] = useState(false);
   const [showPending, setShowPending] = useState(false);
   const [selectedSubmissionId, setSelectedSubmissionId] = useState(null);
   const [data, setData] = useState(null);
@@ -169,7 +170,8 @@ function AdminPanel({ authData, telegramId }) {
       {adminTab === 'management' && mngSubPage === 'pending' && selectedSubmissionId && <AdminReviewPage submissionId={selectedSubmissionId} onBack={() => setSelectedSubmissionId(null)} onDone={() => setSelectedSubmissionId(null)} />}
       {adminTab === 'management' && mngSubPage === 'lessons' && <AdminLessonsList onBack={() => setMngSubPage(null)} />}
       {adminTab === 'stats' && <AdminStatistics />}
-      {adminTab === 'settings' && <AdminSettings />}
+      {showLessonsManage && <AdminLessonsManage onBack={() => setShowLessonsManage(false)} />}
+      {adminTab === 'settings' && <AdminSettings onLessonsManage={() => setShowLessonsManage(true)} />}
       
       <AdminBottomNav activeTab={adminTab} setActiveTab={setAdminTab} />
     </div>
@@ -414,8 +416,14 @@ function AdminStats() {
 }
 
 // ============== ADMIN SETTINGS ==============
-function AdminSettings() {
-  const handleAlert = (label) => alert(label + " - tez orada qoshiladi");
+function AdminSettings({ onLessonsManage }) {
+  const handleAlert = (label) => {
+    if (label === "Darslarni boshqarish" && onLessonsManage) {
+      onLessonsManage();
+      return;
+    }
+    alert(label + " - tez orada qoshiladi");
+  };
 
   const sections = [
     {
@@ -2402,6 +2410,93 @@ function AdminStatistics() {
         )}
       </main>
     </>
+  );
+}
+
+
+// === ADMIN LESSONS MANAGE (lock/unlock) ===
+function AdminLessonsManage({ onBack }) {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [toggling, setToggling] = useState(null);
+
+  const load = () => {
+    setLoading(true);
+    studentAPI.getAdminLessons()
+      .then(d => { setData(d); setLoading(false); })
+      .catch(() => setLoading(false));
+  };
+  useEffect(load, []);
+
+  const handleToggle = async (lesson) => {
+    const action = lesson.is_unlocked ? "yopish" : "ochish";
+    if (!confirm(lesson.lesson_number + "-dars (" + lesson.title.substring(0, 30) + "...) ni " + action + " kerakmi?")) return;
+    setToggling(lesson.id);
+    try {
+      const result = await studentAPI.toggleLesson(lesson.id);
+      alert(result.message + "!");
+      load();
+    } catch (e) {
+      alert("Xato: " + e.message);
+    } finally {
+      setToggling(null);
+    }
+  };
+
+  if (loading) return <div className="font-inter bg-background min-h-screen flex items-center justify-center"><div>Yuklanmoqda...</div></div>;
+
+  const stats = data?.stats || {total: 0, unlocked: 0, locked: 0};
+  const lessons = data?.lessons || [];
+
+  return (
+    <div className="font-inter bg-background min-h-screen pb-24">
+      <header className="fixed top-0 left-0 w-full z-50 flex items-center justify-between px-4 bg-surface h-14 border-b border-outline-variant">
+        <div className="flex items-center gap-3">
+          <button onClick={onBack} className="active:scale-95">
+            <span className="material-symbols-outlined text-primary">arrow_back</span>
+          </button>
+          <h1 className="text-base font-bold text-primary">Darslarni boshqarish</h1>
+        </div>
+      </header>
+
+      <main className="pt-20 px-4 space-y-3">
+        <section className="bg-primary-container rounded-2xl p-4 text-white">
+          <h2 className="text-base font-bold mb-1">📚 Darslarni ochish/yopish</h2>
+          <p className="text-xs opacity-90 mb-3">Tugmani bosib darsni ochib yoki yopib qo'ying</p>
+          <div className="grid grid-cols-3 gap-2 mt-3">
+            <div className="bg-white/10 p-2 rounded-lg text-center">
+              <p className="text-2xl font-bold">{stats.total}</p>
+              <p className="text-[10px] opacity-80">Jami</p>
+            </div>
+            <div className="bg-white/10 p-2 rounded-lg text-center">
+              <p className="text-2xl font-bold">{stats.unlocked}</p>
+              <p className="text-[10px] opacity-80">Ochiq</p>
+            </div>
+            <div className="bg-white/10 p-2 rounded-lg text-center">
+              <p className="text-2xl font-bold">{stats.locked}</p>
+              <p className="text-[10px] opacity-80">Yopiq</p>
+            </div>
+          </div>
+        </section>
+
+        <section className="space-y-2">
+          {lessons.map(l => (
+            <div key={l.id} className="bg-white rounded-2xl p-3 shadow-sm border border-outline-variant flex items-center gap-3">
+              <div className={"w-9 h-9 rounded-lg flex items-center justify-center font-bold text-sm flex-shrink-0 " + (l.is_unlocked ? "bg-primary text-white" : "bg-surface-container text-outline")}>{l.lesson_number}</div>
+              <div className="flex-1 min-w-0">
+                <h3 className="text-sm font-bold text-on-surface truncate">{l.title}</h3>
+                <p className="text-[10px] text-outline truncate">{l.speaker || "—"}</p>
+              </div>
+              <button onClick={() => handleToggle(l)} disabled={toggling === l.id}
+                className={"px-3 py-2 rounded-xl text-xs font-bold flex-shrink-0 active:scale-95 disabled:opacity-50 " + 
+                  (l.is_unlocked ? "bg-green-100 text-green-700" : "bg-gray-200 text-gray-700")}>
+                {toggling === l.id ? "..." : (l.is_unlocked ? "🔓 OCHIQ" : "🔒 YOPIQ")}
+              </button>
+            </div>
+          ))}
+        </section>
+      </main>
+    </div>
   );
 }
 
