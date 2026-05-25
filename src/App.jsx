@@ -418,6 +418,7 @@ function AdminStats() {
 // ============== ADMIN SETTINGS ==============
 function AdminSettings({ onLessonsManage }) {
   const handleAlert = (label) => {
+    alert("Bosildi: " + label);
     if (label === "Darslarni boshqarish" && onLessonsManage) {
       onLessonsManage();
       return;
